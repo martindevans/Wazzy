@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Wasmtime" Version="14.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Interop\" />
+    <Folder Include="Extensions\" />
+    <Folder Include="WasiSnapshotPreview1\Poll\" />
+    <Folder Include="WasiSnapshotPreview1\Socket\" />
+  </ItemGroup>
+
+</Project>
