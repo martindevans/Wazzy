@@ -53,7 +53,7 @@ public class ManualClock
         return nanos;
     }
 
-    public override WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
+    protected override WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
     {
         switch (id)
         {
@@ -72,7 +72,7 @@ public class ManualClock
         }
     }
 
-    public override WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
+    protected override WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
     {
         switch (id)
         {

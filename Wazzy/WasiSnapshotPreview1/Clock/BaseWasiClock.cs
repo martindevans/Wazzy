@@ -22,7 +22,7 @@ public abstract class BaseWasiClock
     /// <param name="precision">The maximum lag (exclusive) that the returned time value may have, compared to its actual value</param>
     /// <param name="retValue"></param>
     /// <returns></returns>
-    public abstract WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue);
+    protected abstract WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue);
 
     /// <summary>
     /// Return the resolution of a clock.
@@ -33,7 +33,7 @@ public abstract class BaseWasiClock
     /// <param name="id"></param>
     /// <param name="retValue"></param>
     /// <returns></returns>
-    public abstract WasiError GetResolution(Caller caller, ClockId id, out ulong retValue);
+    protected abstract WasiError GetResolution(Caller caller, ClockId id, out ulong retValue);
 
     /// <inheritdoc />
     public void DefineOn(Linker linker)

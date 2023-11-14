@@ -26,7 +26,7 @@ public class RealtimeClock
         _monotonic.Start();
     }
 
-    public override WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
+    protected override WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
     {
         switch (id)
         {
@@ -52,7 +52,7 @@ public class RealtimeClock
         }
     }
 
-    public override WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
+    protected override WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
     {
         switch (id)
         {

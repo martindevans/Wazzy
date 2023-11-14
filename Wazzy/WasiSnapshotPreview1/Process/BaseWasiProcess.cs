@@ -10,13 +10,13 @@ public abstract class BaseWasiProcess
     /// </summary>
     public static readonly string Module = "wasi_snapshot_preview1";
 
-    public abstract void ProcExit(Caller caller, uint code);
+    protected abstract void ProcExit(Caller caller, uint code);
 
     /// <summary>
     /// Yield execution immediately
     /// </summary>
     /// <returns></returns>
-    public abstract WasiError SchedulerYield(Caller caller);
+    protected abstract WasiError SchedulerYield(Caller caller);
 
     public void DefineOn(Linker linker)
     {

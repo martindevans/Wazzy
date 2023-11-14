@@ -18,7 +18,7 @@ public class SeededRandomSource
     {
     }
 
-    public override WasiError RandomGet(Caller caller, Span<byte> output)
+    protected override WasiError RandomGet(Caller caller, Span<byte> output)
     {
         lock (_rng)
         {

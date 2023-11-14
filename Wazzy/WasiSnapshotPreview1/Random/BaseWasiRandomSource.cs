@@ -17,7 +17,7 @@ public abstract class BaseWasiRandomSource
     /// <param name="caller">Context for this call</param>
     /// <param name="output">Buffer to fill with random data</param>
     /// <returns></returns>
-    public abstract WasiError RandomGet(Caller caller, Span<byte> output);
+    protected abstract WasiError RandomGet(Caller caller, Span<byte> output);
 
     public void DefineOn(Linker linker)
     {

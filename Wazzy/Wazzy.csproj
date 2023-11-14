@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Wazzy</Title>
-    <Version>0.0.1</Version>
+    <Version>0.0.3</Version>
     <Authors>Martin Evans</Authors>
     <Description>A pure C# implementation of WASI</Description>
     <PackageProjectUrl>https://github.com/martindevans/Wazzy</PackageProjectUrl>
@@ -19,8 +19,6 @@
   <ItemGroup>
     <Folder Include="Interop\" />
     <Folder Include="Extensions\" />
-    <Folder Include="WasiSnapshotPreview1\Poll\" />
-    <Folder Include="WasiSnapshotPreview1\Socket\" />
   </ItemGroup>
 
 </Project>
