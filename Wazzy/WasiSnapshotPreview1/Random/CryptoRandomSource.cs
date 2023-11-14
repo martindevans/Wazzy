@@ -3,6 +3,9 @@ using Wasmtime;
 
 namespace Wazzy.WasiSnapshotPreview1.Random;
 
+/// <summary>
+/// Provides cryptographically strong random numbers
+/// </summary>
 public class CryptoRandomSource
     : BaseWasiRandomSource
 {

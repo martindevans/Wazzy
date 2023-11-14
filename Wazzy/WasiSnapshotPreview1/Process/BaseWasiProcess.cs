@@ -10,6 +10,11 @@ public abstract class BaseWasiProcess
     /// </summary>
     public static readonly string Module = "wasi_snapshot_preview1";
 
+    /// <summary>
+    /// Exit the process with the given return code
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <param name="code"></param>
     protected abstract void ProcExit(Caller caller, uint code);
 
     /// <summary>

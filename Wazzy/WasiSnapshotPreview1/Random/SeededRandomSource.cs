@@ -3,6 +3,9 @@ using Wasmtime;
 
 namespace Wazzy.WasiSnapshotPreview1.Random;
 
+/// <summary>
+/// Provides random numbers from a seeded System.Random instance
+/// </summary>
 public class SeededRandomSource
     : BaseWasiRandomSource
 {
