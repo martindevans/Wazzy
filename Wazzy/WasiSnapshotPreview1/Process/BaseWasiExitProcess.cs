@@ -2,7 +2,7 @@
 
 namespace Wazzy.WasiSnapshotPreview1.Process;
 
-public abstract class BaseWasiProcess
+public abstract class BaseWasiExitProcess
     : IWasiFeature
 {
     /// <summary>
@@ -17,21 +17,11 @@ public abstract class BaseWasiProcess
     /// <param name="code"></param>
     protected abstract void ProcExit(Caller caller, uint code);
 
-    /// <summary>
-    /// Yield execution immediately
-    /// </summary>
-    /// <returns></returns>
-    protected abstract WasiError SchedulerYield(Caller caller);
-
     public void DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "proc_exit", (Caller caller, int code) => ProcExit(
             caller,
             unchecked((uint)code)
-        ));
-
-        linker.DefineFunction(Module, "sched_yield", caller => (int)SchedulerYield(
-            caller
         ));
     }
 }
