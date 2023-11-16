@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using Wasmtime;
+﻿using Wasmtime;
 using Wazzy.Async.Extensions;
 using Wazzy.Extensions;
 
@@ -27,25 +26,24 @@ public static class WasmAsyncExtensions
     /// </summary>
     private const int BaseAddress = 16;
 
-    private static int GetExecutionStateAddr()
-    {
-        return BaseAddress;
-    }
+    /// <summary>
+    /// Data is packed into memory, starting at this address. Fields are:
+    /// - 4 bytes: execution state index
+    /// - 4 bytes: size of locals data
+    /// - 16 bytes: async stack structure
+    /// - N bytes: locals data
+    /// - (padding to 8 byte alignment)
+    /// - {stack data...}
+    /// </summary>
+    private const int BaseAddress2 = 16;
+    private const int ExecutionStateAddr = BaseAddress2;
+    private const int LocalsSizeAddr = ExecutionStateAddr + 4;
+    private const int AsyncStackStructAddr = LocalsSizeAddr + 4;
+    private const int LocalsDataAddr = AsyncStackStructAddr + 16;
 
-    private static int GetLocalsSizeAddr()
+    private static int GetAsyncStackStartAddr(int localsSize)
     {
-        return BaseAddress + 4;
-    }
-
-    private static int GetLocalsAddr()
-    {
-        return GetLocalsSizeAddr() + 4;
-    }
-
-    private static int GetAsyncStackStructAddr(int localsSize)
-    {
-        // Get the address
-        var x = GetLocalsAddr() + localsSize;
+        var x = LocalsDataAddr + localsSize;
 
         // Move up to the next address aligned to 8
         var addr = x + 7 & -8;
@@ -53,28 +51,20 @@ public static class WasmAsyncExtensions
         return addr;
     }
 
-    private static int GetAsyncStackStartAddr(int localsSize)
-    {
-        var stackStruct = GetAsyncStackStructAddr(localsSize);
-        return stackStruct + 16;
-    }
-
-    private static ref AsyncStackStruct32 GetAsyncStackStruct32(Memory memory, int localsSize)
+    private static ref AsyncStackStruct32 GetAsyncStackStruct32(Memory memory)
     {
         unsafe
         {
-            var addr = GetAsyncStackStructAddr(localsSize);
-            var ptr = memory.GetPointer() + addr;
+            var ptr = memory.GetPointer() + AsyncStackStructAddr;
             return ref *((AsyncStackStruct32*)ptr.ToPointer());
         }
     }
 
-    private static ref AsyncStackStruct64 GetAsyncStackStruct64(Memory memory, int localsSize)
+    private static ref AsyncStackStruct64 GetAsyncStackStruct64(Memory memory)
     {
         unsafe
         {
-            var addr = GetAsyncStackStructAddr(localsSize);
-            var ptr = memory.GetPointer() + addr;
+            var ptr = memory.GetPointer() + AsyncStackStructAddr;
             return ref *((AsyncStackStruct64*)ptr.ToPointer());
         }
     }
@@ -105,15 +95,15 @@ public static class WasmAsyncExtensions
         memory.ReadMemory(_unwindStash.Value);
 
         // Write the execution state number
-        memory.WriteInt32(GetExecutionStateAddr(), executionState);
+        memory.WriteInt32(ExecutionStateAddr, executionState);
 
         // Set up rewind structure (start and end of asyncify stack)
-        ref var stackStruct = ref GetAsyncStackStruct32(memory, localSize);
+        ref var stackStruct = ref GetAsyncStackStruct32(memory);
         stackStruct.StackStart = GetAsyncStackStartAddr(localSize);
         stackStruct.StackEnd = StashSize;
 
         // Start async unwinding into memory
-        caller.AsyncifyStartUnwind(GetAsyncStackStructAddr(localSize));
+        caller.AsyncifyStartUnwind(AsyncStackStructAddr);
     }
 
     /// <summary>
@@ -139,7 +129,7 @@ public static class WasmAsyncExtensions
         memory.ReadMemory(savedStackData.Data);
 
         // Read this _before_ restoring memory state
-        savedStackData.LocalsSize = memory.ReadInt32(GetLocalsSizeAddr());
+        savedStackData.LocalsSize = memory.ReadInt32(LocalsSizeAddr);
 
         // Restore memory to the correct state
         memory.WriteMemory(_unwindStash.Value);
@@ -175,7 +165,7 @@ public static class WasmAsyncExtensions
         memory.WriteMemory(stack.Value);
 
         // Trigger async rewind
-        instance.AsyncifyStartRewind(GetAsyncStackStructAddr(stack.LocalsSize));
+        instance.AsyncifyStartRewind(AsyncStackStructAddr);
 
         // Dispose the stack, ensuring it cannot be used again
         stack.Dispose();
@@ -226,12 +216,12 @@ public static class WasmAsyncExtensions
         // Sanity check the size of the locals data
         int localSize;
         unsafe { localSize = sizeof(T); }
-        if (memory.ReadInt32(GetLocalsSizeAddr()) != localSize)
+        if (memory.ReadInt32(LocalsSizeAddr) != localSize)
             throw new InvalidOperationException($"Attempted to read locals data {typeof(T).Name}, but size does not match! Wrong type?");
 
         // Grab the data from where it should be in memory
-        executionState = caller.GetDefaultMemory().ReadInt32(GetExecutionStateAddr());
-        return memory.Read<T>(GetLocalsAddr());
+        executionState = caller.GetDefaultMemory().ReadInt32(ExecutionStateAddr);
+        return memory.Read<T>(LocalsDataAddr);
     }
 
     /// <summary>
@@ -265,13 +255,12 @@ public static class WasmAsyncExtensions
         StartUnwind(caller, executionState, localSize);
 
         // Copy locals into memory
-        memory.WriteInt32(GetLocalsSizeAddr(), localSize);
-        memory.Write(GetLocalsAddr(), locals);
+        memory.WriteInt32(LocalsSizeAddr, localSize);
+        memory.Write(LocalsDataAddr, locals);
 
         // Increment state number
-        var stateAddr = GetExecutionStateAddr();
-        var state = memory.ReadInt32(stateAddr);
-        memory.WriteInt32(stateAddr, state + 1);
+        var state = memory.ReadInt32(ExecutionStateAddr);
+        memory.WriteInt32(ExecutionStateAddr, state + 1);
     }
 
     /// <summary>
@@ -300,7 +289,7 @@ public static class WasmAsyncExtensions
         }
 
         // Read the execution state from memory
-        executionState = caller.GetDefaultMemory().ReadInt32(GetExecutionStateAddr());
+        executionState = caller.GetDefaultMemory().ReadInt32(ExecutionStateAddr);
 
         // Finish rewinding, ready to resume execution
         StopRewind(caller);
