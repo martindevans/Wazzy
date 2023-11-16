@@ -1,4 +1,7 @@
-﻿using Wasmtime;
+﻿using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Wasmtime;
 using Wazzy.Async;
 using Wazzy.Async.Extensions;
 
@@ -43,6 +46,9 @@ public sealed class YieldTests
                     _printCalls.Add((arg, hex));
                     Console.WriteLine($"Print Part 3: {arg} {hex}");
                     break;
+
+                default:
+                    throw new BadExecutionStateException(eState);
             }
         });
 
@@ -63,7 +69,7 @@ public sealed class YieldTests
                     return arg * 2;
 
                 default:
-                    throw WasmAsyncExtensions.BadExecutionState(eState);
+                    throw new BadExecutionStateException(eState);
             }
         });
     }
@@ -85,7 +91,6 @@ public sealed class YieldTests
         {
             var stack = instance.StopUnwind();
             instance.StartRewind(stack);
-            stack.Dispose();
 
             result = call(default);
         }
@@ -131,5 +136,63 @@ public sealed class YieldTests
         {
             instance.StartRewind(default);
         });
+    }
+
+    [TestMethod]
+    public void IllegalUseStackTwice()
+    {
+        var instance = _helper.Instantiate();
+
+        // Start call and grab the stack
+        var call = instance.GetFunction<int, int>("run")!;
+        call(10);
+        var stack = instance.StopUnwind();
+
+        // Resume once
+        instance.StartRewind(stack);
+        call(default);
+        var stack2 = instance.StopUnwind();
+
+        // Resume again, using the wrong stack
+        Assert.ThrowsException<ObjectDisposedException>(() =>
+        {
+            instance.StartRewind(stack);
+        });
+    }
+
+    [TestMethod]
+    public void IllegalExecutionState()
+    {
+        var instance = _helper.Instantiate();
+
+        // Start call and grab the stack
+        var call = instance.GetFunction<int, int>("run")!;
+        call(10);
+        var stack = instance.StopUnwind();
+
+        // Do evil things to corrupt the execution state
+        unsafe
+        {
+            fixed (byte* buffer = &stack.Value.GetPinnableReference())
+            {
+                buffer[16] = 9;
+            }
+        }
+
+        // Resume, but now the execution state is corrupted so we should get an exception
+        instance.StartRewind(stack);
+        stack.Dispose();
+
+        try
+        {
+            call(default);
+        }
+        catch (WasmtimeException ex)
+        {
+            Assert.IsTrue(ex.InnerException is BadExecutionStateException);
+            return;
+        }
+
+        Assert.Fail();
     }
 }

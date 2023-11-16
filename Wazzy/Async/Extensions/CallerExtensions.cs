@@ -11,11 +11,9 @@ public static class CallerExtensions
     /// <returns></returns>
     public static AsyncState? GetAsyncState(this Caller caller)
     {
-        var func = caller.GetFunction("asyncify_get_state")?.WrapFunc<int>();
-        if (func == null)
-            return null;
-
-        return (AsyncState)func();
+        return (AsyncState?)caller.GetFunction("asyncify_get_state")
+                                 ?.WrapFunc<int>()
+                                 ?.Invoke();
     }
 
     internal static Memory GetDefaultMemory(this Caller caller)

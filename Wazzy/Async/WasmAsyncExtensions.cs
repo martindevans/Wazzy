@@ -176,6 +176,9 @@ public static class WasmAsyncExtensions
 
         // Trigger async rewind
         instance.AsyncifyStartRewind(GetAsyncStackStructAddr(stack.LocalsSize));
+
+        // Dispose the stack, ensuring it cannot be used again
+        stack.Dispose();
     }
 
     /// <summary>
@@ -313,17 +316,6 @@ public static class WasmAsyncExtensions
     public static int Resume(this Caller caller)
     {
         return caller.Resume(out _);
-    }
-
-    /// <summary>
-    /// Throw an exception indicating that the execution state was unpexpected
-    /// </summary>
-    /// <param name="executionState"></param>
-    /// <param name="name"></param>
-    /// <returns></returns>
-    public static Exception BadExecutionState(int executionState, [CallerMemberName] string name = "")
-    {
-        return new BadExecutionStateException(executionState, name);
     }
 
     /// <summary>

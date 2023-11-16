@@ -4,13 +4,11 @@ namespace Wazzy.Async.Extensions;
 
 public static class InstanceExtensions
 {
-    public static AsyncState GetAsyncState(this Instance instance)
+    public static AsyncState? GetAsyncState(this Instance instance)
     {
-        var func = instance.GetFunction("asyncify_get_state")?.WrapFunc<int>();
-        if (func == null)
-            return AsyncState.None;
-
-        return (AsyncState)func();
+        return (AsyncState?)instance.GetFunction("asyncify_get_state")
+                                   ?.WrapFunc<int>()
+                                   ?.Invoke();
     }
 
     internal static Memory GetDefaultMemory(this Instance instance)
