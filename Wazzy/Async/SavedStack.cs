@@ -8,7 +8,6 @@ internal class SavedStackData
     private static readonly ConcurrentBag<SavedStackData> _pool = new();
 
     public byte[] Data { get; set; }
-    public int LocalsSize { get; set; }
 
     public int Epoch { get; private set; }
 
@@ -39,26 +38,16 @@ internal class SavedStackData
 /// Represents a stack that has been rewound out of a WASM Instance and may be resumed.
 /// </summary>
 public readonly struct SavedStack
-    : IDisposable
 {
     private readonly SavedStackData _data;
     private readonly int _epoch;
 
-    public ReadOnlySpan<byte> Value
+    internal ReadOnlySpan<byte> Value
     {
         get
         {
             CheckEpoch();
             return _data.Data;
-        }
-    }
-
-    public int LocalsSize
-    {
-        get
-        {
-            CheckEpoch();
-            return _data.LocalsSize;
         }
     }
 
@@ -76,7 +65,7 @@ public readonly struct SavedStack
     /// <summary>
     /// Dispose this stack, returning memory to the pool
     /// </summary>
-    public void Dispose()
+    internal void Dispose()
     {
         if (_epoch == _data.Epoch)
             SavedStackData.Return(_data);

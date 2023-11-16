@@ -23,6 +23,7 @@ public class WasmTestHelper
             : Module.FromTextFile(Engine, path);
         Store = new Store(Engine);
         Linker = new Linker(Engine);
+        Linker.AllowShadowing = true;
     }
 
     public void Dispose()

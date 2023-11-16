@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Wazzy</Title>
-    <Version>0.0.7</Version>
+    <Version>0.0.8</Version>
     <Authors>Martin Evans</Authors>
     <Description>A pure C# implementation of WASI</Description>
     <PackageProjectUrl>https://github.com/martindevans/Wazzy</PackageProjectUrl>

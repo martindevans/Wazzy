@@ -21,14 +21,14 @@ public sealed class YieldTests
         _helper.Linker.DefineFunction("spectest", "print", (Caller call, int arg) =>
         {
             // Get or restore locals
-            (byte, long now) locals = call.GetSuspendedLocals<(byte, long)>(out var eState)
+            (byte, long now) locals = call.GetSuspendedLocals<(byte, long)>()
                                    ?? (0, DateTime.UtcNow.Ticks);
 
             // Do some setup stuff. This happens on every pass!
             var hex = (locals.now & 0xFFFF).ToString("X");
 
             // Do the actual work, step by step
-            switch (call.Resume())
+            switch (call.Resume(out var eState))
             {
                 case 0:
                     _printCalls.Add((arg, hex));
@@ -54,15 +54,11 @@ public sealed class YieldTests
 
         _helper.Linker.DefineFunction("whatever", "double", (Caller call, int arg) =>
         {
-            // Get or restore locals
-            var locals = call.GetSuspendedLocals<(int, int, int)>(out var eState)
-                      ?? (0, 0, 0);
-
             // Do the actual work, step by step
-            switch (call.Resume())
+            switch (call.Resume(out var eState))
             {
                 case 0:
-                    call.Suspend(locals, eState);
+                    call.Suspend(eState);
                     return 0;
 
                 case 1:
@@ -116,6 +112,26 @@ public sealed class YieldTests
     }
 
     [TestMethod]
+    public void NestedAsyncCall()
+    {
+        var instance = _helper.Instantiate();
+
+        var call = instance.GetFunction<int, int>("run_double")!;
+        var result = call(11);
+
+        while (instance.GetAsyncState() == AsyncState.Suspending)
+        {
+            var stack = instance.StopUnwind();
+            instance.StartRewind(stack);
+
+            result = call(default);
+        }
+
+        // The final result should be the initial input
+        Assert.AreEqual(11, result);
+    }
+
+    [TestMethod]
     public void IllegalStopUnwind()
     {
         var instance = _helper.Instantiate();
@@ -161,35 +177,55 @@ public sealed class YieldTests
     }
 
     [TestMethod]
-    public void IllegalExecutionState()
+    public void IllegalIncorrectLocalsType()
     {
+        //Redefine "print" to get a `long` the first time it is suspended, then save a `long`, then next time it tries to load an `int`
+        var counter = 0;
+        _helper.Linker.DefineFunction("spectest", "print", (Caller call, int arg) =>
+        {
+            if (counter == 0)
+            {
+                call.GetSuspendedLocals<long>();
+                counter++;
+            }
+            else if (counter == 1)
+            {
+                call.GetSuspendedLocals<int>();
+                counter++;
+            }
+
+            // Do the actual work, step by step
+            switch (call.Resume(out var eState))
+            {
+                case 0:
+                    call.Suspend(1L, eState);
+                    break;
+
+                default:
+                    throw new BadExecutionStateException(eState);
+            }
+        });
+
         var instance = _helper.Instantiate();
 
-        // Start call and grab the stack
+        // Call
         var call = instance.GetFunction<int, int>("run")!;
-        call(10);
+        var result = call(10);
+
+        // Catch unwind
         var stack = instance.StopUnwind();
 
-        // Do evil things to corrupt the execution state
-        unsafe
-        {
-            fixed (byte* buffer = &stack.Value.GetPinnableReference())
-            {
-                buffer[16] = 9;
-            }
-        }
-
-        // Resume, but now the execution state is corrupted so we should get an exception
+        // Resume
         instance.StartRewind(stack);
-        stack.Dispose();
 
+        // Now this should throw
         try
         {
-            call(default);
+            result = call(default);
         }
         catch (WasmtimeException ex)
         {
-            Assert.IsTrue(ex.InnerException is BadExecutionStateException);
+            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidOperationException));
             return;
         }
 

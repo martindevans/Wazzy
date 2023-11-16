@@ -17,17 +17,6 @@ public static class WasmAsyncExtensions
     #region memory addresses
     /// <summary>
     /// Data is packed into memory, starting at this address. Fields are:
-    ///  - 4 bytes: execution state index
-    ///  - 4 bytes: size of locals data
-    ///  - N bytes: locals data
-    ///  - (padding to 8 byte alignment)
-    ///  - 16 bytes: async stack structure
-    ///  - {stack data...}
-    /// </summary>
-    private const int BaseAddress = 16;
-
-    /// <summary>
-    /// Data is packed into memory, starting at this address. Fields are:
     /// - 4 bytes: execution state index
     /// - 4 bytes: size of locals data
     /// - 16 bytes: async stack structure
@@ -35,8 +24,8 @@ public static class WasmAsyncExtensions
     /// - (padding to 8 byte alignment)
     /// - {stack data...}
     /// </summary>
-    private const int BaseAddress2 = 16;
-    private const int ExecutionStateAddr = BaseAddress2;
+    private const int BaseAddress = 16;
+    private const int ExecutionStateAddr = BaseAddress;
     private const int LocalsSizeAddr = ExecutionStateAddr + 4;
     private const int AsyncStackStructAddr = LocalsSizeAddr + 4;
     private const int LocalsDataAddr = AsyncStackStructAddr + 16;
@@ -128,9 +117,6 @@ public static class WasmAsyncExtensions
         var savedStackData = SavedStackData.Get();
         memory.ReadMemory(savedStackData.Data);
 
-        // Read this _before_ restoring memory state
-        savedStackData.LocalsSize = memory.ReadInt32(LocalsSizeAddr);
-
         // Restore memory to the correct state
         memory.WriteMemory(_unwindStash.Value);
 
@@ -201,15 +187,12 @@ public static class WasmAsyncExtensions
     /// <param name="caller"></param>
     /// <param name="executionState">The current execution state</param>
     /// <returns></returns>
-    public static T? GetSuspendedLocals<T>(this Caller caller, out int executionState)
+    public static T? GetSuspendedLocals<T>(this Caller caller)
         where T : unmanaged
     {
         // If we're not rewinding then there's nothing to restore.
         if (caller.GetAsyncState() != AsyncState.Resuming)
-        {
-            executionState = 0;
             return null;
-        }
 
         var memory = caller.GetDefaultMemory();
 
@@ -220,20 +203,7 @@ public static class WasmAsyncExtensions
             throw new InvalidOperationException($"Attempted to read locals data {typeof(T).Name}, but size does not match! Wrong type?");
 
         // Grab the data from where it should be in memory
-        executionState = caller.GetDefaultMemory().ReadInt32(ExecutionStateAddr);
         return memory.Read<T>(LocalsDataAddr);
-    }
-
-    /// <summary>
-    /// Try to get saved locals state, returns null if not unwinding
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="caller"></param>
-    /// <returns></returns>
-    public static T? GetSuspendedLocals<T>(this Caller caller)
-        where T : unmanaged
-    {
-        return caller.GetSuspendedLocals<T>(out _);
     }
 
     /// <summary>
