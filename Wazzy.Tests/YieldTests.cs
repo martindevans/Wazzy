@@ -83,8 +83,8 @@ public sealed class YieldTests
 
         while (instance.GetAsyncState() == AsyncState.Suspending)
         {
-            var stack = WasmAsyncExtensions.StopUnwind(instance);
-            WasmAsyncExtensions.StartRewind(instance, stack);
+            var stack = instance.StopUnwind();
+            instance.StartRewind(stack);
             stack.Dispose();
 
             result = call(default);

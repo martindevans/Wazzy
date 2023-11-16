@@ -106,7 +106,7 @@ public static class WasmAsyncExtensions
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    private static void StartUnwind(Caller caller, int executionState, int localSize)
+    private static void StartUnwind(this Caller caller, int executionState, int localSize)
     {
         var memory = GetMemory(caller);
 
@@ -139,7 +139,7 @@ public static class WasmAsyncExtensions
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    public static SavedStack StopUnwind(Instance instance)
+    public static SavedStack StopUnwind(this Instance instance)
     {
         var memory = GetMemory(instance);
 
@@ -171,7 +171,7 @@ public static class WasmAsyncExtensions
     /// <param name="stack"></param>
     /// <exception cref="NotSupportedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    public static void StartRewind(Instance instance, SavedStack stack)
+    public static void StartRewind(this Instance instance, SavedStack stack)
     {
         if (stack.Value == null)
             throw new ArgumentException("Stack is null", nameof(stack));
@@ -201,7 +201,7 @@ public static class WasmAsyncExtensions
     /// <param name="caller"></param>
     /// <exception cref="NotSupportedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    private static void StopRewind(Caller caller)
+    private static void StopRewind(this Caller caller)
     {
         var memory = GetMemory(caller);
 
