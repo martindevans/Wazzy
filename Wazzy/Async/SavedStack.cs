@@ -8,7 +8,6 @@ internal class SavedStackData
     private static readonly ConcurrentBag<SavedStackData> _pool = new();
 
     public byte[] Data { get; set; }
-    public int ExecutionState { get; set; }
     public int LocalsSize { get; set; }
 
     public int Epoch { get; private set; }
@@ -54,15 +53,6 @@ public readonly struct SavedStack
         }
     }
 
-    public int ExecutionState
-    {
-        get
-        {
-            CheckEpoch();
-            return _data.ExecutionState;
-        }
-    }
-
     public int LocalsSize
     {
         get
@@ -71,6 +61,8 @@ public readonly struct SavedStack
             return _data.LocalsSize;
         }
     }
+
+    internal bool IsNull => _data == null;
 
     /// <summary>
     /// Represents a stack that has been rewound out of a WASM Instance and may be resumed.

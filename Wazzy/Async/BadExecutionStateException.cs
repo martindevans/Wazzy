@@ -1,15 +1,8 @@
 ﻿namespace Wazzy.Async;
 
-public class BadExecutionStateException
-    : Exception
+public class BadExecutionStateException(int executionState, string name)
+    : Exception($"Bad execution state in '{name}': {executionState}")
 {
-    public int ExecutionState { get; }
-    public string MethodName { get; }
-
-    public BadExecutionStateException(int executionState, string name)
-        : base($"Bad execution state in '{name}': {executionState}")
-    {
-        ExecutionState = executionState;
-        MethodName = name;
-    }
+    public int ExecutionState { get; } = executionState;
+    public string MethodName { get; } = name;
 }

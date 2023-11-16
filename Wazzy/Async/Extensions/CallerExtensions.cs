@@ -18,6 +18,13 @@ public static class CallerExtensions
         return (AsyncState)func();
     }
 
+    internal static Memory GetDefaultMemory(this Caller caller)
+    {
+        // Get memory, it should always be called "memory" (by convention)
+        return caller.GetMemory("memory")
+            ?? throw new InvalidOperationException("Cannot get exported memory");
+    }
+
     internal static void AsyncifyStartUnwind(this Caller caller, int addr)
     {
         caller.GetAsyncState().AssertState(AsyncState.None);

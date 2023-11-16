@@ -9,7 +9,7 @@ internal static class MemoryExtensions
         var currentBytesSize = memory.GetLength();
         var deltaBytes = finalBytesSize - currentBytesSize;
 
-        if (deltaBytes < 0)
+        if (deltaBytes <= 0)
             return;
 
         var pageSize = currentBytesSize / memory.GetSize();

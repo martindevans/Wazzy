@@ -74,7 +74,7 @@ public sealed class YieldTests
     }
 
     [TestMethod]
-    public void Simple()
+    public void SimpleAsyncCall()
     {
         var instance = _helper.Instantiate();
 
@@ -108,5 +108,28 @@ public sealed class YieldTests
         Assert.AreEqual(33, _printCalls[6].Item1);
         Assert.AreEqual(33, _printCalls[7].Item1);
         Assert.AreEqual(33, _printCalls[8].Item1);
+    }
+
+    [TestMethod]
+    public void IllegalStopUnwind()
+    {
+        var instance = _helper.Instantiate();
+
+        // illegal in current state
+        Assert.ThrowsException<InvalidOperationException>(() =>
+        {
+            instance.StopUnwind();
+        });
+    }
+
+    [TestMethod]
+    public void IllegalNullStack()
+    {
+        var instance = _helper.Instantiate();
+
+        Assert.ThrowsException<ArgumentException>(() =>
+        {
+            instance.StartRewind(default);
+        });
     }
 }

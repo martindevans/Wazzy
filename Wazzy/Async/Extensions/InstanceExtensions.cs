@@ -13,6 +13,13 @@ public static class InstanceExtensions
         return (AsyncState)func();
     }
 
+    internal static Memory GetDefaultMemory(this Instance instance)
+    {
+        // Get memory, it should always be called "memory" (by convention)
+        return instance.GetMemory("memory")
+            ?? throw new InvalidOperationException("Cannot get exported memory");
+    }
+
     internal static void AsyncifyStopUnwind(this Instance instance)
     {
         instance.GetAsyncState().AssertState(AsyncState.Suspending);

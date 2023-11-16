@@ -15,22 +15,6 @@ public static class WasmAsyncExtensions
     private static readonly ThreadLocal<byte[]> _unwindStash = new(() => new byte[StashSize]);
     private static readonly ThreadLocal<byte[]> _rewindStash = new(() => new byte[StashSize]);
 
-    #region get memory
-    private static Memory GetMemory(Instance instance)
-    {
-        // Get memory, it should always be called "memory" (by convention)
-        return instance.GetMemory("memory")
-            ?? throw new InvalidOperationException("Cannot get exported memory");
-    }
-
-    private static Memory GetMemory(Caller caller)
-    {
-        // Get memory, it should always be called "memory" (by convention)
-        return caller.GetMemory("memory")
-            ?? throw new InvalidOperationException("Cannot get exported memory");
-    }
-    #endregion
-
     #region memory addresses
     /// <summary>
     /// Data is packed into memory, starting at this address. Fields are:
@@ -108,7 +92,7 @@ public static class WasmAsyncExtensions
     /// <exception cref="InvalidOperationException"></exception>
     private static void StartUnwind(this Caller caller, int executionState, int localSize)
     {
-        var memory = GetMemory(caller);
+        var memory = caller.GetDefaultMemory();
 
         // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
         if (memory.Is64Bit)
@@ -141,7 +125,7 @@ public static class WasmAsyncExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static SavedStack StopUnwind(this Instance instance)
     {
-        var memory = GetMemory(instance);
+        var memory = instance.GetDefaultMemory();
 
         // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
         if (memory.Is64Bit)
@@ -154,8 +138,7 @@ public static class WasmAsyncExtensions
         var savedStackData = SavedStackData.Get();
         memory.ReadMemory(savedStackData.Data);
 
-        // Read execution state _before_ restoring memory state
-        savedStackData.ExecutionState = memory.ReadInt32(GetExecutionStateAddr());
+        // Read this _before_ restoring memory state
         savedStackData.LocalsSize = memory.ReadInt32(GetLocalsSizeAddr());
 
         // Restore memory to the correct state
@@ -173,10 +156,10 @@ public static class WasmAsyncExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static void StartRewind(this Instance instance, SavedStack stack)
     {
-        if (stack.Value == null)
+        if (stack.IsNull)
             throw new ArgumentException("Stack is null", nameof(stack));
 
-        var memory = GetMemory(instance);
+        var memory = instance.GetDefaultMemory();
 
         // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
         if (memory.Is64Bit)
@@ -203,7 +186,7 @@ public static class WasmAsyncExtensions
     /// <exception cref="InvalidOperationException"></exception>
     private static void StopRewind(this Caller caller)
     {
-        var memory = GetMemory(caller);
+        var memory = caller.GetDefaultMemory();
 
         // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
         if (memory.Is64Bit)
@@ -235,7 +218,7 @@ public static class WasmAsyncExtensions
             return null;
         }
 
-        var memory = GetMemory(caller);
+        var memory = caller.GetDefaultMemory();
 
         // Sanity check the size of the locals data
         int localSize;
@@ -244,7 +227,7 @@ public static class WasmAsyncExtensions
             throw new InvalidOperationException($"Attempted to read locals data {typeof(T).Name}, but size does not match! Wrong type?");
 
         // Grab the data from where it should be in memory
-        executionState = GetMemory(caller).ReadInt32(GetExecutionStateAddr());
+        executionState = caller.GetDefaultMemory().ReadInt32(GetExecutionStateAddr());
         return memory.Read<T>(GetLocalsAddr());
     }
 
@@ -270,7 +253,7 @@ public static class WasmAsyncExtensions
     public static void Suspend<T>(this Caller caller, T locals, int executionState)
         where T : unmanaged
     {
-        var memory = GetMemory(caller);
+        var memory = caller.GetDefaultMemory();
 
         int localSize;
         unsafe { localSize = sizeof(T); }
@@ -314,7 +297,7 @@ public static class WasmAsyncExtensions
         }
 
         // Read the execution state from memory
-        executionState = GetMemory(caller).ReadInt32(GetExecutionStateAddr());
+        executionState = caller.GetDefaultMemory().ReadInt32(GetExecutionStateAddr());
 
         // Finish rewinding, ready to resume execution
         StopRewind(caller);
