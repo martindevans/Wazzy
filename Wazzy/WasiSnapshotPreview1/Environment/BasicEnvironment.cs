@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Text;
+﻿using System.Text;
 using Wasmtime;
 using Wazzy.Interop;
 
@@ -18,24 +17,6 @@ public class BasicEnvironment
     private uint _argsBytesCount;
 
     /// <summary>
-    /// Create a new virtual environment, setting all environment variables
-    /// </summary>
-    /// <param name="env">Environment variables</param>
-    public BasicEnvironment(IReadOnlyDictionary<string, string> env)
-        : this(env, null)
-    {
-    }
-
-    /// <summary>
-    /// Create a new virtual environment, setting all arguments
-    /// </summary>
-    /// <param name="args">Arguments</param>
-    public BasicEnvironment(IReadOnlyList<string> args)
-        : this(null, args)
-    {
-    }
-
-    /// <summary>
     /// Create a new virtual environment, optionally setting all arguments and environment variables
     /// </summary>
     /// <param name="env">Environment variables</param>
@@ -46,8 +27,7 @@ public class BasicEnvironment
             foreach (var (k, v) in env)
                 SetEnvironmentVariable(k, v);
 
-        if (args != null)
-            SetArgs(args);
+        SetArgs(args ?? Array.Empty<string>());
     }
 
     /// <summary>
@@ -76,24 +56,6 @@ public class BasicEnvironment
             // Add new value
             _envVars[key] = bytes;
             _envBytesCount += (uint)bytes.Length;
-        }
-
-        return this;
-    }
-
-    /// <summary>
-    /// Copy the environment variables from this process into the virtual environment
-    /// </summary>
-    public BasicEnvironment PassthroughEnvironmentVariables()
-    {
-        var variables = System.Environment.GetEnvironmentVariables();
-        foreach (DictionaryEntry entry in variables)
-        {
-            var (k, v) = entry;
-            var key = k.ToString();
-            var value = v?.ToString();
-            if (key != null && value != null)
-                SetEnvironmentVariable(key, value);
         }
 
         return this;

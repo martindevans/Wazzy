@@ -2,7 +2,7 @@
 
 namespace Wazzy.Async;
 
-public class BadExecutionStateException(int executionState, [CallerMemberName] string name = "")
+public class BadExecutionStateException(int executionState, string name)
     : Exception($"Bad execution state in '{name}': {executionState}")
 {
     public int ExecutionState { get; } = executionState;

@@ -1,9 +1,8 @@
-﻿using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Wasmtime;
+﻿using Wasmtime;
 using Wazzy.Async;
 using Wazzy.Async.Extensions;
+using Wazzy.Extensions;
+using Wazzy.WasiSnapshotPreview1.Process;
 
 namespace Wazzy.Tests;
 
@@ -48,7 +47,7 @@ public sealed class YieldTests
                     break;
 
                 default:
-                    throw new BadExecutionStateException(eState);
+                    throw new BadExecutionStateException(eState, "spectest.print");
             }
         });
 
@@ -65,7 +64,7 @@ public sealed class YieldTests
                     return arg * 2;
 
                 default:
-                    throw new BadExecutionStateException(eState);
+                    throw new BadExecutionStateException(eState, "whatever.double");
             }
         });
     }
@@ -167,7 +166,7 @@ public sealed class YieldTests
         // Resume once
         instance.StartRewind(stack);
         call(default);
-        var stack2 = instance.StopUnwind();
+        instance.StopUnwind();
 
         // Resume again, using the wrong stack
         Assert.ThrowsException<ObjectDisposedException>(() =>
@@ -181,7 +180,7 @@ public sealed class YieldTests
     {
         //Redefine "print" to get a `long` the first time it is suspended, then save a `long`, then next time it tries to load an `int`
         var counter = 0;
-        _helper.Linker.DefineFunction("spectest", "print", (Caller call, int arg) =>
+        _helper.Linker.DefineFunction("spectest", "print", (Caller call, int _) =>
         {
             if (counter == 0)
             {
@@ -202,7 +201,7 @@ public sealed class YieldTests
                     break;
 
                 default:
-                    throw new BadExecutionStateException(eState);
+                    throw new BadExecutionStateException(eState, "spectest.print");
             }
         });
 
@@ -210,7 +209,7 @@ public sealed class YieldTests
 
         // Call
         var call = instance.GetFunction<int, int>("run")!;
-        var result = call(10);
+        call(10);
 
         // Catch unwind
         var stack = instance.StopUnwind();
@@ -221,11 +220,57 @@ public sealed class YieldTests
         // Now this should throw
         try
         {
-            result = call(default);
+            call(default);
         }
         catch (WasmtimeException ex)
         {
             Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidOperationException));
+            return;
+        }
+
+        Assert.Fail();
+    }
+
+    [TestMethod]
+    public void IllegalExecutionState()
+    {
+        //Redefine "print" to trigger a bad execution state
+        _helper.Linker.DefineFunction("spectest", "print", (Caller call, int _) =>
+        {
+            switch (call.Resume(out var eState))
+            {
+                case 0:
+                    call.Suspend(eState + 10); // feed in an invalid state
+                    break;
+
+                default:
+                    throw new BadExecutionStateException(eState, "spectest.print");
+            }
+        });
+
+        var instance = _helper.Instantiate();
+
+        // Call
+        var call = instance.GetFunction<int, int>("run")!;
+        call(10);
+
+        // Catch unwind
+        var stack = instance.StopUnwind();
+
+        // Resume
+        instance.StartRewind(stack);
+
+        // Now this should throw
+        try
+        {
+            call(default);
+        }
+        catch (WasmtimeException ex)
+        {
+            Assert.IsInstanceOfType(ex.InnerException, typeof(BadExecutionStateException));
+            var bad = (BadExecutionStateException)ex.InnerException;
+            Assert.AreEqual(11, bad.ExecutionState);
+            Assert.AreEqual("spectest.print", bad.MethodName);
             return;
         }
 

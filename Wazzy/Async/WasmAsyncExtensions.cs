@@ -276,15 +276,5 @@ public static class WasmAsyncExtensions
     {
         return caller.Resume(out _);
     }
-
-    /// <summary>
-    /// Check if the given caller is capable of async suspension/resumption
-    /// </summary>
-    /// <param name="caller"></param>
-    /// <returns></returns>
-    public static bool IsAsyncCapable(this Caller caller)
-    {
-        return caller.GetFunction("asyncify_start_unwind") != null;
-    }
     #endregion
 }

@@ -16,8 +16,10 @@ public class EnvironmentTests
     [TestMethod]
     public void GetEnvSizes()
     {
-        _helper.AddWasiFeature(new BasicEnvironment()
-                              .SetEnvironmentVariable("FOO", "BAR")
+        _helper.AddWasiFeature(new BasicEnvironment(new Dictionary<string, string>
+                               {
+                                   { "FOO", "BAR" }
+                               })
                               .SetEnvironmentVariable("BASH", "the_old_value")
                               .SetEnvironmentVariable("BASH", "baz")
         );

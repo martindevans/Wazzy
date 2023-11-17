@@ -8,7 +8,7 @@ namespace Wazzy.WasiSnapshotPreview1.Clock;
 public class ManualClock
     : BaseWasiClock
 {
-    private readonly DateTime Epoch = new(year: 1970, month: 1, day: 1);
+    private readonly DateTime Epoch = DateTime.UnixEpoch;
 
     private DateTime _now;
     public DateTime Now

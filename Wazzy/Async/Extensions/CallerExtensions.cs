@@ -16,6 +16,16 @@ public static class CallerExtensions
                                  ?.Invoke();
     }
 
+    /// <summary>
+    /// Check if the given caller is capable of async suspension/resumption
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <returns></returns>
+    public static bool IsAsyncCapable(this Caller caller)
+    {
+        return caller.GetFunction("asyncify_start_unwind") != null;
+    }
+
     internal static Memory GetDefaultMemory(this Caller caller)
     {
         // Get memory, it should always be called "memory" (by convention)
