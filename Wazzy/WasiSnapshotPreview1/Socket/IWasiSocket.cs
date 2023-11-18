@@ -4,7 +4,7 @@ using Wazzy.WasiSnapshotPreview1.FileSystem;
 
 namespace Wazzy.WasiSnapshotPreview1.Socket;
 
-public abstract class BaseWasiSocket
+public interface IWasiSocket
     : IWasiFeature
 {
     /// <summary>
@@ -20,7 +20,7 @@ public abstract class BaseWasiSocket
     /// <param name="fd"></param>
     /// <param name="flags"></param>
     /// <returns></returns>
-    protected abstract WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags);
+    protected WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags);
 
     /// <summary>
     /// Receive a message from a socket.
@@ -33,7 +33,7 @@ public abstract class BaseWasiSocket
     /// <param name="roDataPtr"></param>
     /// <param name="roFlagsOut"></param>
     /// <returns></returns>
-    protected abstract WasiError Receive(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> riData, RiFlags riFlags, Pointer<byte> roDataPtr, Pointer<RoFlags> roFlagsOut);
+    protected WasiError Receive(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> riData, RiFlags riFlags, Pointer<byte> roDataPtr, Pointer<RoFlags> roFlagsOut);
 
     /// <summary>
     /// Send a message on a socket.
@@ -45,7 +45,7 @@ public abstract class BaseWasiSocket
     /// <param name="siFlags"></param>
     /// <param name="sentBytes"></param>
     /// <returns></returns>
-    protected abstract WasiError Send(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> siData, SiFlags siFlags, out int sentBytes);
+    protected WasiError Send(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> siData, SiFlags siFlags, out int sentBytes);
 
     /// <summary>
     /// Shut down socket send and receive channels.
@@ -55,9 +55,9 @@ public abstract class BaseWasiSocket
     /// <param name="fd"></param>
     /// <param name="how"></param>
     /// <returns></returns>
-    protected abstract WasiError Shutdown(Caller caller, FileDescriptor fd, SdFlags how);
+    protected WasiError Shutdown(Caller caller, FileDescriptor fd, SdFlags how);
 
-    public void DefineOn(Linker linker)
+    void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "sock_accept",
             (Caller caller, int fd, int flags) => (int)Accept(

@@ -7,9 +7,9 @@ namespace Wazzy.WasiSnapshotPreview1.Random;
 /// Provides cryptographically strong random numbers
 /// </summary>
 public class CryptoRandomSource
-    : BaseWasiRandomSource
+    : IWasiRandomSource
 {
-    protected override WasiError RandomGet(Caller caller, Span<byte> output)
+    public WasiError RandomGet(Caller caller, Span<byte> output)
     {
         RandomNumberGenerator.Fill(output);
         return WasiError.SUCCESS;

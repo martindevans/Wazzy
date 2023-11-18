@@ -73,10 +73,6 @@ public static class WasmAsyncExtensions
     {
         var memory = caller.GetDefaultMemory();
 
-        // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
-        if (memory.Is64Bit)
-            throw new NotSupportedException("Cannot unwind 64 bit WASM");
-
         // Check state is as expected
         caller.GetAsyncState().AssertState(AsyncState.None);
 
@@ -87,9 +83,18 @@ public static class WasmAsyncExtensions
         memory.WriteInt32(ExecutionStateAddr, executionState);
 
         // Set up rewind structure (start and end of asyncify stack)
-        ref var stackStruct = ref GetAsyncStackStruct32(memory);
-        stackStruct.StackStart = GetAsyncStackStartAddr(localSize);
-        stackStruct.StackEnd = StashSize;
+        if (memory.Is64Bit)
+        {
+            ref var stackStruct = ref GetAsyncStackStruct64(memory);
+            stackStruct.StackStart = GetAsyncStackStartAddr(localSize);
+            stackStruct.StackEnd = StashSize;
+        }
+        else
+        {
+            ref var stackStruct = ref GetAsyncStackStruct32(memory);
+            stackStruct.StackStart = GetAsyncStackStartAddr(localSize);
+            stackStruct.StackEnd = StashSize;
+        }
 
         // Start async unwinding into memory
         caller.AsyncifyStartUnwind(AsyncStackStructAddr);
@@ -105,10 +110,6 @@ public static class WasmAsyncExtensions
     public static SavedStack StopUnwind(this Instance instance)
     {
         var memory = instance.GetDefaultMemory();
-
-        // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
-        if (memory.Is64Bit)
-            throw new NotSupportedException("Cannot unwind 64 bit WASM");
 
         // Finish the async unwind
         instance.AsyncifyStopUnwind();
@@ -137,10 +138,6 @@ public static class WasmAsyncExtensions
 
         var memory = instance.GetDefaultMemory();
 
-        // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
-        if (memory.Is64Bit)
-            throw new NotSupportedException("Cannot unwind 64 bit WASM");
-
         // Check state is as expected
         instance.GetAsyncState().AssertState(AsyncState.None);
 
@@ -167,10 +164,6 @@ public static class WasmAsyncExtensions
     {
         var memory = caller.GetDefaultMemory();
 
-        // The unwinding data structures are differently sized when 64 bit, so that's not supported for now
-        if (memory.Is64Bit)
-            throw new NotSupportedException("Cannot unwind 64 bit WASM");
-
         // Stop the async rewind
         caller.AsyncifyStopRewind();
 
@@ -185,7 +178,6 @@ public static class WasmAsyncExtensions
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="caller"></param>
-    /// <param name="executionState">The current execution state</param>
     /// <returns></returns>
     public static T? GetSuspendedLocals<T>(this Caller caller)
         where T : unmanaged
@@ -265,16 +257,6 @@ public static class WasmAsyncExtensions
         StopRewind(caller);
 
         return executionState;
-    }
-
-    /// <summary>
-    /// Resume execution that was previously suspended.
-    /// </summary>
-    /// <param name="caller"></param>
-    /// <returns>The execution state, increments every time this function resumes.</returns>
-    public static int Resume(this Caller caller)
-    {
-        return caller.Resume(out _);
     }
     #endregion
 }

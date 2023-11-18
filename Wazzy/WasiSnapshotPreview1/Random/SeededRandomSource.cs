@@ -1,27 +1,16 @@
-﻿using System.Security.Cryptography;
-using Wasmtime;
+﻿using Wasmtime;
 
 namespace Wazzy.WasiSnapshotPreview1.Random;
 
 /// <summary>
 /// Provides random numbers from a seeded System.Random instance
 /// </summary>
-public class SeededRandomSource
-    : BaseWasiRandomSource
+public class SeededRandomSource(int seed)
+    : IWasiRandomSource
 {
-    private readonly System.Random _rng;
+    private readonly System.Random _rng = new(seed);
 
-    public SeededRandomSource(int seed)
-    {
-        _rng = new System.Random(seed);
-    }
-
-    public SeededRandomSource()
-        : this(RandomNumberGenerator.GetInt32(int.MinValue, int.MaxValue))
-    {
-    }
-
-    protected override WasiError RandomGet(Caller caller, Span<byte> output)
+    public WasiError RandomGet(Caller caller, Span<byte> output)
     {
         lock (_rng)
         {

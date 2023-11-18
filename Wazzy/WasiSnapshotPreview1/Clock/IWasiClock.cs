@@ -6,7 +6,7 @@ namespace Wazzy.WasiSnapshotPreview1.Clock;
 /// <summary>
 /// Implements WASI clock functions
 /// </summary>
-public abstract class BaseWasiClock
+public interface IWasiClock
     : IWasiFeature
 {
     /// <summary>
@@ -22,7 +22,7 @@ public abstract class BaseWasiClock
     /// <param name="precision">The maximum lag (exclusive) that the returned time value may have, compared to its actual value</param>
     /// <param name="retValue"></param>
     /// <returns></returns>
-    protected abstract WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue);
+    protected WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue);
 
     /// <summary>
     /// Return the resolution of a clock.
@@ -33,10 +33,10 @@ public abstract class BaseWasiClock
     /// <param name="id"></param>
     /// <param name="retValue"></param>
     /// <returns></returns>
-    protected abstract WasiError GetResolution(Caller caller, ClockId id, out ulong retValue);
+    protected WasiError GetResolution(Caller caller, ClockId id, out ulong retValue);
 
     /// <inheritdoc />
-    public void DefineOn(Linker linker)
+    void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "clock_time_get",
             (Caller caller, int id, long precision, int resultAddr) => (int)TimeGet(

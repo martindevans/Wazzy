@@ -1,4 +1,5 @@
 using Wasmtime;
+using Wazzy.WasiSnapshotPreview1;
 using Wazzy.WasiSnapshotPreview1.Clock;
 
 namespace Wazzy.Tests;
@@ -17,6 +18,11 @@ public sealed class ClockTests
     private static (int, long) GetTime(Instance instance, int id)
     {
         return instance.GetFunction<int, (int, long)>("get_clock")!(id);
+    }
+
+    private static (int, long) GetResolution(Instance instance, int id)
+    {
+        return instance.GetFunction<int, (int, long)>("get_res")!(id);
     }
 
     [TestMethod]
@@ -38,6 +44,33 @@ public sealed class ClockTests
 
         // Check that some time passed
         Assert.AreNotEqual(firstTime, secondTime);
+
+        // Check resolution
+        var (reserr, res) = GetResolution(instance, 0);
+        Assert.AreEqual(0, reserr);
+        Assert.IsTrue(res > 0);
+    }
+
+    [TestMethod]
+    public void RealtimeClockResolution()
+    {
+        _helper.AddWasiFeature(new RealtimeClock());
+        var instance = _helper.Instantiate();
+
+        // Check resolution is somewhere between 0 and 100ms
+        var (reserr, res) = GetResolution(instance, 0);
+        Assert.AreEqual(0, reserr);
+        Assert.IsTrue(res is > 0 and < 100_000_000);
+    }
+
+    [TestMethod]
+    public void RealtimeClockResolutionInvalidId()
+    {
+        _helper.AddWasiFeature(new RealtimeClock());
+        var instance = _helper.Instantiate();
+
+        var (reserr, _) = GetResolution(instance, 5);
+        Assert.AreEqual((int)WasiError.EINVAL, reserr);
     }
 
     [TestMethod]
@@ -59,9 +92,20 @@ public sealed class ClockTests
     }
 
     [TestMethod]
+    public void RealtimeClockGetTimeInvalidId()
+    {
+        _helper.AddWasiFeature(new RealtimeClock());
+        var instance = _helper.Instantiate();
+
+        // Get the time
+        var (erra, firstTime) = GetTime(instance, 5);
+        Assert.AreEqual((int)WasiError.EINVAL, erra);
+    }
+
+    [TestMethod]
     public void ManualClock()
     {
-        var clock = new ManualClock(DateTime.UnixEpoch);
+        var clock = new ManualClock(DateTime.UnixEpoch, TimeSpan.FromMilliseconds(1));
         _helper.AddWasiFeature(clock);
         var instance = _helper.Instantiate();
 
@@ -88,5 +132,49 @@ public sealed class ClockTests
 
         // Check that exactly 14us passed
         Assert.AreEqual((long)TimeSpan.FromMicroseconds(14).TotalNanoseconds, time3 - time2);
+    }
+
+    [TestMethod]
+    public void ManualTickBackwards()
+    {
+        var clock = new ManualClock(DateTime.UnixEpoch, TimeSpan.FromMilliseconds(1));
+        _helper.AddWasiFeature(clock);
+
+        Assert.ThrowsException<ArgumentException>(() =>
+        {
+            clock.Tick(TimeSpan.FromDays(-1));
+        });
+    }
+
+    [TestMethod]
+    public void ManualClockResolution()
+    {
+        _helper.AddWasiFeature(new ManualClock());
+        var instance = _helper.Instantiate();
+
+        // Check resolution is somewhere between 0 and 100ms
+        var (reserr, res) = GetResolution(instance, 0);
+        Assert.AreEqual(0, reserr);
+        Assert.IsTrue(res is > 0 and < 100_000_000);
+    }
+
+    [TestMethod]
+    public void ManualClockResolutionInvalidId()
+    {
+        _helper.AddWasiFeature(new ManualClock());
+        var instance = _helper.Instantiate();
+
+        var (reserr, _) = GetResolution(instance, 5);
+        Assert.AreEqual((int)WasiError.EINVAL, reserr);
+    }
+
+    [TestMethod]
+    public void ManualClockGetTimeInvalidId()
+    {
+        _helper.AddWasiFeature(new ManualClock());
+        var instance = _helper.Instantiate();
+
+        var (reserr, _) = GetTime(instance, 5);
+        Assert.AreEqual((int)WasiError.EINVAL, reserr);
     }
 }

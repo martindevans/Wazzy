@@ -14,7 +14,7 @@ public static class LinkerExtensions
     /// <param name="linker">Linker to define feature on</param>
     /// <param name="feature">Feature to define</param>
     /// <returns></returns>
-    public static T Define<T>(this Linker linker, T feature)
+    public static T DefineFeature<T>(this Linker linker, T feature)
         where T : IWasiFeature
     {
         feature.DefineOn(linker);

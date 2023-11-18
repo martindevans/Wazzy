@@ -42,7 +42,7 @@ public class WasmTestHelper
         where T : IWasiFeature
     {
         _features.Add(feature);
-        Linker.Define(feature);
+        Linker.DefineFeature(feature);
         return feature;
     }
 
@@ -50,21 +50,5 @@ public class WasmTestHelper
     {
         var instance = Linker.Instantiate(Store, Module);
         return instance;
-    }
-
-    private class Wrapper
-    {
-        private readonly WasmTestHelper _helper;
-
-        public Store Store => _helper.Store;
-        public Instance Instance { get; }
-        public Memory memory { get; }
-
-        public Wrapper(WasmTestHelper helper, Instance instance)
-        {
-            _helper = helper;
-            Instance = instance;
-            memory = instance.GetMemory("memory")!;
-        }
     }
 }

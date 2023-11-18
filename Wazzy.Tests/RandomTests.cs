@@ -49,4 +49,19 @@ public class RandomTests
         Assert.AreEqual(0, errb);
         Assert.AreEqual(-5764130197907881473, valb);
     }
+
+    [TestMethod]
+    public void ZeroRandomSource()
+    {
+        _helper.AddWasiFeature(new ZeroRandomSource());
+        var instance = _helper.Instantiate();
+
+        var (erra, vala) = GetRandom(instance);
+        Assert.AreEqual(0, erra);
+        Assert.AreEqual(0, vala);
+
+        var (errb, valb) = GetRandom(instance);
+        Assert.AreEqual(0, errb);
+        Assert.AreEqual(0, valb);
+    }
 }

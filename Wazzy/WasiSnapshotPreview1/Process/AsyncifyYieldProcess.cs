@@ -8,9 +8,9 @@ namespace Wazzy.WasiSnapshotPreview1.Process;
 /// When "SchedulerYield" is called this will suspend the process using the binaryen asyncify transform
 /// </summary>
 public class AsyncifyYieldProcess
-    : BaseWasiYieldProcess
+    : IWasiYieldProcess
 {
-    protected override WasiError SchedulerYield(Caller caller)
+    public WasiError SchedulerYield(Caller caller)
     {
         // Immediately exit if this caller can't async suspend
         if (!caller.IsAsyncCapable())
@@ -18,7 +18,7 @@ public class AsyncifyYieldProcess
 
         // If this is the first time suspend execution, otherwise resume
         if (caller.GetAsyncState() == AsyncState.Resuming)
-            caller.Resume();
+            caller.Resume(out _);
         else
             caller.Suspend(0);
 

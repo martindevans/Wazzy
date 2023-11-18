@@ -7,13 +7,9 @@ namespace Wazzy.WasiSnapshotPreview1.Clock;
 /// A clock for WASI that ticks automatically as real time passes
 /// </summary>
 public class RealtimeClock
-    : BaseWasiClock
+    : IWasiClock
 {
     private readonly Stopwatch _monotonic;
-
-    // This value increments every time the Monotonic clock is read. This ensures that
-    // there's at least 1 nanosecond of difference from one call to the next.
-    private ulong _monotonicSkew;
 
     /// <summary>
     /// Get the current time in nanoseconds since the unix epoch
@@ -26,7 +22,7 @@ public class RealtimeClock
         _monotonic.Start();
     }
 
-    protected override WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
+    public WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
     {
         switch (id)
         {
@@ -38,9 +34,7 @@ public class RealtimeClock
 
             case ClockId.Monotonic:
             {
-                var now = _monotonic.ElapsedMilliseconds;
-                var nanos = (ulong)now * 1000000;
-                retValue = nanos + unchecked(_monotonicSkew++);
+                retValue = (ulong)_monotonic.Elapsed.TotalNanoseconds;
                 return WasiError.SUCCESS;
             }
 
@@ -52,22 +46,18 @@ public class RealtimeClock
         }
     }
 
-    protected override WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
+    public WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
     {
         switch (id)
         {
             case ClockId.Realtime:
-                // 55 milliseconds, expressed as nanos
-                retValue = 55_000_000;
-                return WasiError.SUCCESS;
-
             case ClockId.Monotonic:
-                // 15 milliseconds, expressed as nanos
-                retValue = 15_000_000;
-                return WasiError.SUCCESS;
-
             case ClockId.ProcessCpuTime:
             case ClockId.ThreadCpuTime:
+                // 10 milliseconds, expressed as nanos
+                retValue = 10_000_000;
+                return WasiError.SUCCESS;
+
             default:
                 retValue = 0;
                 return WasiError.EINVAL;

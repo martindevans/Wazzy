@@ -8,7 +8,7 @@ namespace Wazzy.WasiSnapshotPreview1.Environment;
 /// Setup an environment for WASI with environment variables and command line args
 /// </summary>
 public class BasicEnvironment
-    : BaseWasiEnvironment
+    : IWasiEnvironment
 {
     private readonly Dictionary<string, Memory<byte>> _envVars = new();
     private uint _envBytesCount;
@@ -94,14 +94,14 @@ public class BasicEnvironment
         return this;
     }
 
-    protected override WasiError EnvironGetSizes(Caller caller, out uint argNum, out uint dataLen)
+    public WasiError EnvironGetSizes(Caller caller, out uint argNum, out uint dataLen)
     {
         argNum = (uint)_envVars.Count;
         dataLen = _envBytesCount;
         return WasiError.SUCCESS;
     }
 
-    protected override WasiError EnvironGet(Caller caller, ReadonlyPointer<Pointer<uint>> environ, Pointer<byte> environBuffer)
+    public WasiError EnvironGet(Caller caller, ReadonlyPointer<Pointer<uint>> environ, Pointer<byte> environBuffer)
     {
         var addr = environBuffer.Addr;
         var environBufferSpan = new Buffer<byte>(environBuffer.Addr, _envBytesCount).GetSpan(caller);
@@ -123,14 +123,14 @@ public class BasicEnvironment
         return WasiError.SUCCESS;
     }
 
-    protected override WasiError ArgsGetSizes(Caller caller, out uint argNum, out uint dataLen)
+    public WasiError ArgsGetSizes(Caller caller, out uint argNum, out uint dataLen)
     {
         argNum = (uint)_args.Count;
         dataLen = _argsBytesCount;
         return WasiError.SUCCESS;
     }
 
-    protected override WasiError ArgsGet(Caller caller, ReadonlyPointer<Pointer<uint>> args, Pointer<byte> argsBuffer)
+    public WasiError ArgsGet(Caller caller, ReadonlyPointer<Pointer<uint>> args, Pointer<byte> argsBuffer)
     {
         var addr = argsBuffer.Addr;
         var argsBufferSpan = new Buffer<byte>(argsBuffer.Addr, _argsBytesCount).GetSpan(caller);

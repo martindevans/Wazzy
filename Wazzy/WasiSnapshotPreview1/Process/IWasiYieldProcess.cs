@@ -2,7 +2,7 @@
 
 namespace Wazzy.WasiSnapshotPreview1.Process;
 
-public abstract class BaseWasiYieldProcess
+public interface IWasiYieldProcess
     : IWasiFeature
 {
     /// <summary>
@@ -14,9 +14,9 @@ public abstract class BaseWasiYieldProcess
     /// Yield execution immediately
     /// </summary>
     /// <returns></returns>
-    protected abstract WasiError SchedulerYield(Caller caller);
+    protected WasiError SchedulerYield(Caller caller);
 
-    public void DefineOn(Linker linker)
+    void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "sched_yield", caller => (int)SchedulerYield(
             caller

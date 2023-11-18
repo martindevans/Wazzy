@@ -6,21 +6,13 @@ namespace Wazzy.WasiSnapshotPreview1.Clock;
 /// A clock for WASI that stays frozen in time unless explicity advanced in time
 /// </summary>
 public class ManualClock
-    : BaseWasiClock
+    : IWasiClock
 {
     private readonly DateTime Epoch = DateTime.UnixEpoch;
 
-    private DateTime _now;
-    public DateTime Now
-    {
-        get => _now;
-        set
-        {
-            if (value < _now)
-                throw new InvalidOperationException("Cannot go backwards in time");
-            _now = value;
-        }
-    }
+    private readonly TimeSpan _resolution;
+
+    public DateTime Now { get; private set; }
 
     public ulong NowNanos => FromRealTime(Now);
 
@@ -28,9 +20,16 @@ public class ManualClock
     /// Set the clock to start at a given time
     /// </summary>
     /// <param name="timeNow"></param>
-    public ManualClock(DateTime? timeNow = null)
+    /// <param name="resolution">Clock resolution (in nanoseconds)</param>
+    public ManualClock(DateTime? timeNow, TimeSpan resolution)
     {
-        _now = timeNow ?? DateTime.UtcNow;
+        _resolution = resolution;
+        Now = timeNow ?? DateTime.UtcNow;
+    }
+
+    public ManualClock()
+        : this(DateTime.UtcNow, TimeSpan.FromMilliseconds(1))
+    {
     }
 
     /// <summary>
@@ -53,7 +52,7 @@ public class ManualClock
         return nanos;
     }
 
-    protected override WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
+    public WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue)
     {
         switch (id)
         {
@@ -72,22 +71,17 @@ public class ManualClock
         }
     }
 
-    protected override WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
+    public WasiError GetResolution(Caller caller, ClockId id, out ulong retValue)
     {
         switch (id)
         {
-            case ClockId.Realtime:
-                // 1 milliseconds, expressed as nanos
-                retValue = 1_000_000;
-                return WasiError.SUCCESS;
-
             case ClockId.Monotonic:
-                // 1 milliseconds, expressed as nanos
-                retValue = 1_000_000;
-                return WasiError.SUCCESS;
-
+            case ClockId.Realtime:
             case ClockId.ProcessCpuTime:
             case ClockId.ThreadCpuTime:
+                retValue = (ulong)_resolution.TotalNanoseconds;
+                return WasiError.SUCCESS;
+
             default:
                 retValue = 0;
                 return WasiError.EINVAL;

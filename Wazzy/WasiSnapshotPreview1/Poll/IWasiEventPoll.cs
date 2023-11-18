@@ -3,7 +3,7 @@ using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.Poll;
 
-public abstract class BaseWasiEventPoll
+public interface IWasiEventPoll
     : IWasiFeature
 {
     /// <summary>
@@ -11,9 +11,9 @@ public abstract class BaseWasiEventPoll
     /// </summary>
     public static readonly string Module = "wasi_snapshot_preview1";
 
-    protected abstract WasiError PollOneoff(Caller caller, ReadOnlySpan<WasiSubscription> @in, Span<WasiEvent> @out, out int neventsOut);
+    protected WasiError PollOneoff(Caller caller, ReadOnlySpan<WasiSubscription> @in, Span<WasiEvent> @out, out int neventsOut);
 
-    public void DefineOn(Linker linker)
+    void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "poll_oneoff",
             (Caller caller, int @in, int @out, int nsubscriptions, int nevents) => (int)PollOneoff(

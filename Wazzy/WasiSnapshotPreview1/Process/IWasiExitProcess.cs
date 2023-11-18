@@ -2,7 +2,7 @@
 
 namespace Wazzy.WasiSnapshotPreview1.Process;
 
-public abstract class BaseWasiExitProcess
+public interface IWasiExitProcess
     : IWasiFeature
 {
     /// <summary>
@@ -15,9 +15,9 @@ public abstract class BaseWasiExitProcess
     /// </summary>
     /// <param name="caller"></param>
     /// <param name="code"></param>
-    protected abstract void ProcExit(Caller caller, uint code);
+    protected void ProcExit(Caller caller, uint code);
 
-    public void DefineOn(Linker linker)
+    void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "proc_exit", (Caller caller, int code) => ProcExit(
             caller,

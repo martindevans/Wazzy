@@ -6,9 +6,9 @@ namespace Wazzy.WasiSnapshotPreview1.Process;
 /// Throws a `ThrowExitProcessException` when proc_exit is called
 /// </summary>
 public class ThrowExitProcess
-    : BaseWasiExitProcess
+    : IWasiExitProcess
 {
-    protected override void ProcExit(Caller caller, uint code)
+    public void ProcExit(Caller caller, uint code)
     {
         throw new ThrowExitProcessException(code);
     }

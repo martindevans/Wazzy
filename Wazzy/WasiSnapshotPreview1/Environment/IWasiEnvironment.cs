@@ -6,7 +6,7 @@ namespace Wazzy.WasiSnapshotPreview1.Environment;
 /// <summary>
 /// Low level interface for WASI environment related functions. This is a direct translation of the low level WASI API.
 /// </summary>
-public abstract class BaseWasiEnvironment
+public interface IWasiEnvironment
     : IWasiFeature
 {
     /// <summary>
@@ -21,7 +21,7 @@ public abstract class BaseWasiEnvironment
     /// <param name="argNum">Number of environment data items</param>
     /// <param name="dataLen">Total length of all environment data items. Each individual item must be encoded into UTF8 and null terminated. e.g. `Key=Value\0`</param>
     /// <returns></returns>
-    protected abstract WasiError EnvironGetSizes(Caller caller, out uint argNum, out uint dataLen);
+    protected WasiError EnvironGetSizes(Caller caller, out uint argNum, out uint dataLen);
 
     /// <summary>
     /// Get the environment data
@@ -30,7 +30,7 @@ public abstract class BaseWasiEnvironment
     /// <param name="environ">Write out pointers to the start of each item into this buffer</param>
     /// <param name="environBuffer">Write out all of the environment data into this buffer (UTF8 encoded, null terminated. e.g. `Key=Value\0`)</param>
     /// <returns></returns>
-    protected abstract WasiError EnvironGet(Caller caller, ReadonlyPointer<Pointer<uint>> environ, Pointer<byte> environBuffer);
+    protected WasiError EnvironGet(Caller caller, ReadonlyPointer<Pointer<uint>> environ, Pointer<byte> environBuffer);
 
     /// <summary>
     /// Get the size of the argument variable data
@@ -39,7 +39,7 @@ public abstract class BaseWasiEnvironment
     /// <param name="argNum">Number of args</param>
     /// <param name="dataLen">Total length of all args items. Each individual item must be encoded into UTF8 and null terminated. e.g. `--foo\0`</param>
     /// <returns></returns>
-    protected abstract WasiError ArgsGetSizes(Caller caller, out uint argNum, out uint dataLen);
+    protected WasiError ArgsGetSizes(Caller caller, out uint argNum, out uint dataLen);
 
     /// <summary>
     /// Get the args data
@@ -48,7 +48,7 @@ public abstract class BaseWasiEnvironment
     /// <param name="environ">Write out pointers to the start of each item into this buffer</param>
     /// <param name="environBuffer">Write out all of the arg data into this buffer (UTF8 encoded, null terminated. e.g. `--foo\0`)</param>
     /// <returns></returns>
-    protected abstract WasiError ArgsGet(Caller caller, ReadonlyPointer<Pointer<uint>> environ, Pointer<byte> environBuffer);
+    protected WasiError ArgsGet(Caller caller, ReadonlyPointer<Pointer<uint>> environ, Pointer<byte> environBuffer);
 
     /// <inheritdoc />
     void IWasiFeature.DefineOn(Linker linker)

@@ -8,9 +8,9 @@ namespace Wazzy.WasiSnapshotPreview1.Socket;
 /// Acts as if the firewall has blocked all attempts to use any socket.
 /// </summary>
 public class NonFunctionalSocket
-    : BaseWasiSocket
+    : IWasiSocket
 {
-    protected override WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags)
+    public WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags)
     {
         // POSIX `accept(2)` (https://man7.org/linux/man-pages/man2/accept.2.html) specifies EPERM error as:
         //
@@ -20,7 +20,7 @@ public class NonFunctionalSocket
         return WasiError.EPERM;
     }
 
-    protected override WasiError Receive(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> riData, RiFlags riFlags, Pointer<byte> roDataPtr, Pointer<RoFlags> roFlagsOut)
+    public WasiError Receive(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> riData, RiFlags riFlags, Pointer<byte> roDataPtr, Pointer<RoFlags> roFlagsOut)
     {
         // POSIX `recv(2) (https://man7.org/linux/man-pages/man2/recv.2.html) specifies ENOTCONN error as:
         //
@@ -31,7 +31,7 @@ public class NonFunctionalSocket
         return WasiError.ENOTCONN;
     }
 
-    protected override WasiError Send(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> siData, SiFlags siFlags, out int sentBytes)
+    public WasiError Send(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> siData, SiFlags siFlags, out int sentBytes)
     {
         // POSIX `send(2) (https://man7.org/linux/man-pages/man2/send.2.html) specifies ENOTCONN error as:
         //
@@ -42,7 +42,7 @@ public class NonFunctionalSocket
         return WasiError.ENOTCONN;
     }
 
-    protected override WasiError Shutdown(Caller caller, FileDescriptor fd, SdFlags how)
+    public WasiError Shutdown(Caller caller, FileDescriptor fd, SdFlags how)
     {
         // POSIX `shutdown(2) (https://man7.org/linux/man-pages/man2/shutdown.2.html) specifies ENOTCONN error as:
         //

@@ -3,7 +3,7 @@ using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.Random;
 
-public abstract class BaseWasiRandomSource
+public interface IWasiRandomSource
     : IWasiFeature
 {
     /// <summary>
@@ -17,9 +17,9 @@ public abstract class BaseWasiRandomSource
     /// <param name="caller">Context for this call</param>
     /// <param name="output">Buffer to fill with random data</param>
     /// <returns></returns>
-    protected abstract WasiError RandomGet(Caller caller, Span<byte> output);
+    protected WasiError RandomGet(Caller caller, Span<byte> output);
 
-    public void DefineOn(Linker linker)
+    void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "random_get",
             (Caller caller, int bufferAddr, int bufferSize) => (int)RandomGet(
