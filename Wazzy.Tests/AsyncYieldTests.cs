@@ -7,7 +7,7 @@ using Wazzy.WasiSnapshotPreview1.Process;
 namespace Wazzy.Tests;
 
 [TestClass]
-public sealed class YieldTests
+public sealed class AsyncYieldTests
     : IDisposable
 {
     private readonly WasmTestHelper _helper = new("Scripts/Simple_Async.wasm");

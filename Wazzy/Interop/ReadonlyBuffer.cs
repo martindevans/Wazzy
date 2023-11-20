@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Wasmtime;
 
 namespace Wazzy.Interop;
@@ -8,6 +9,7 @@ namespace Wazzy.Interop;
 /// </summary>
 /// <typeparam name="T">Type of elements</typeparam>
 [StructLayout(LayoutKind.Sequential)]
+[DebuggerDisplay("ReadonlyBuffer<{typeof(T).Name,nq}>({Addr}, {Length})")]
 public readonly struct ReadonlyBuffer<T>
     where T : unmanaged
 {
@@ -49,10 +51,5 @@ public readonly struct ReadonlyBuffer<T>
     public ReadOnlySpan<T> GetSpan(Caller caller)
     {
         return new Buffer<T>(Addr, Length).GetSpan(caller);
-    }
-
-    public override string ToString()
-    {
-        return $"ReadonlyBuffer<{nameof(T)}>({Addr},{Length})";
     }
 }

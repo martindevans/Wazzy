@@ -94,9 +94,9 @@ public interface IWasiFileSystem
     /// <param name="fd"></param>
     /// <param name="iovs"></param>
     /// <param name="offset"></param>
-    /// <param name="nread"></param>
+    /// <param name="nwrittenOutput"></param>
     /// <returns></returns>
-    protected WasiError PWrite(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nread);
+    protected WasiError PWrite(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nwrittenOutput);
 
     /// <summary>
     /// Get a "FileStat" object for the given file descriptor
@@ -229,7 +229,12 @@ public interface IWasiFileSystem
     /// <param name="filesize">The length of the region to which the advisory applies.</param>
     /// <param name="advice">The advice.</param>
     /// <returns></returns>
-    protected WasiError FdAdvise(Caller caller, FileDescriptor fd, long offset, long filesize, Advice advice);
+    protected WasiError FdAdvise(Caller caller, FileDescriptor fd, long offset, long filesize, Advice advice)
+    {
+        // Advice isn't important (whatever the advice, the result will ultimately be the same). Implement it
+        // to just return success by default.
+        return WasiError.SUCCESS;
+    }
 
     /// <summary>
     /// Force the allocation of space in a file. This is similar to posix_fallocate in POSIX.

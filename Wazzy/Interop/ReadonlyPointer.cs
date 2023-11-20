@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Wasmtime;
 
 namespace Wazzy.Interop;
@@ -8,6 +9,7 @@ namespace Wazzy.Interop;
 /// </summary>
 /// <typeparam name="T">Type of item pointed to</typeparam>
 [StructLayout(LayoutKind.Sequential)]
+[DebuggerDisplay("ReadonlyPointer<{typeof(T).Name,nq}>({Addr})")]
 public readonly struct ReadonlyPointer<T>
     where T : unmanaged
 {
@@ -52,10 +54,5 @@ public readonly struct ReadonlyPointer<T>
     public ref readonly T Deref(Caller caller)
     {
         return ref new Pointer<T>(Addr).Deref(caller);
-    }
-
-    public override string ToString()
-    {
-        return $"ReadonlyPointer<{typeof(T).Name}>({Addr})";
     }
 }
