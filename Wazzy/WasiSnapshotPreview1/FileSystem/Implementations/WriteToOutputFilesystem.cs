@@ -1,31 +1,24 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using Wasmtime;
 using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
 
-public class PrintToLoggerFilesystem
+public abstract class WriteToOutputFilesystem
     : IWasiFileSystem
 {
-    private readonly ILogger _logger;
-    private readonly LogLevel? _stdout;
-    private readonly LogLevel? _stderr;
+    protected abstract void StdOut(string message);
 
-    public PrintToLoggerFilesystem(ILogger logger, LogLevel? stdout = LogLevel.Information, LogLevel? stderr = LogLevel.Warning)
-    {
-        _logger = logger;
-        _stdout = stdout;
-        _stderr = stderr;
-    }
+    protected abstract void StdErr(string message);
 
     public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, ref uint nwrittenOutput)
     {
-        // stdout/stderr
+        // Check if it's stdout or stderr
         if (fd.Handle != 1 && fd.Handle != 2)
             return WasiError.EBADF;
 
+        // Extract the message
         var builder = new StringBuilder();
         var iovecs = iovs.GetSpan(caller);
         var totalWritten = 0u;
@@ -37,14 +30,13 @@ public class PrintToLoggerFilesystem
             totalWritten += (uint)span.Length;
         }
 
-        var level = fd.Handle == 1 ? _stdout : _stderr;
-        if (level.HasValue)
-        {
-#pragma warning disable CA2253
-            _logger.Log(level.Value, "{0}", builder.ToString());
-#pragma warning restore CA2253
-        }
+        // Log it
+        if (fd.Handle == 1)
+            StdOut(builder.ToString());
+        else
+            StdErr(builder.ToString());
 
+        // Done
         nwrittenOutput = totalWritten;
         return WasiError.SUCCESS;
     }

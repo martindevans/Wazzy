@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Wazzy</Title>
-    <Version>0.0.13</Version>
+    <Version>0.0.14</Version>
     <Authors>Martin Evans</Authors>
     <Description>A pure C# implementation of WASI</Description>
     <PackageProjectUrl>https://github.com/martindevans/Wazzy</PackageProjectUrl>
@@ -14,13 +14,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     <PackageReference Include="Wasmtime" Version="14.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Interop\" />
-    <Folder Include="WasiSnapshotPreview1\FileSystem\Implementations\" />
   </ItemGroup>
 
 </Project>
