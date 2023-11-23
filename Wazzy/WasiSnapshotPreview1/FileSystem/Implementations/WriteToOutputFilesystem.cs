@@ -171,3 +171,17 @@ public abstract class WriteToOutputFilesystem
         return WasiError.EBADF;
     }
 }
+
+public class WriteToConsoleFilesystem
+    : WriteToOutputFilesystem
+{
+    protected override void StdOut(string message)
+    {
+        Console.WriteLine(message);
+    }
+
+    protected override void StdErr(string message)
+    {
+        Console.Error.WriteLine(message);
+    }
+}

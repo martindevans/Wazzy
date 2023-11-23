@@ -15,13 +15,13 @@ public interface IWasiExitProcess
     /// </summary>
     /// <param name="caller"></param>
     /// <param name="code"></param>
-    protected void ProcExit(Caller caller, uint code);
+    protected void ProcExit(Caller caller, int code);
 
     void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "proc_exit", (Caller caller, int code) => ProcExit(
             caller,
-            unchecked((uint)code)
+            code
         ));
     }
 }

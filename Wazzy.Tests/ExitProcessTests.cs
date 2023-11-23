@@ -1,7 +1,5 @@
 using Wasmtime;
-using Wazzy.WasiSnapshotPreview1;
 using Wazzy.WasiSnapshotPreview1.Process;
-using Wazzy.WasiSnapshotPreview1.Random;
 
 namespace Wazzy.Tests;
 
@@ -31,7 +29,7 @@ public class ExitProcessTests
         catch (WasmtimeException ex)
         {
             Assert.IsInstanceOfType<ThrowExitProcessException>(ex.InnerException);
-            Assert.AreEqual(42u, ((ThrowExitProcessException)ex.InnerException).ExitCode);
+            Assert.AreEqual(42, ((ThrowExitProcessException)ex.InnerException).ExitCode);
             return;
         }
 

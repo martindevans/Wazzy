@@ -44,4 +44,23 @@ public sealed class InteropTests
         var value1 = ptr1.Deref(memory);
         Assert.AreEqual(-1, value1);
     }
+
+    [TestMethod]
+    public void ConvertBufferToReadonly()
+    {
+        var a = new Buffer<long>(18, 24);
+        var b = (ReadonlyBuffer<long>)a;
+
+        Assert.AreEqual(a.Addr, b.Addr);
+        Assert.AreEqual(a.Length, b.Length);
+    }
+
+    [TestMethod]
+    public void ConvertPointerToReadonly()
+    {
+        var a = new Pointer<long>(1456);
+        var b = (ReadonlyPointer<long>)a;
+
+        Assert.AreEqual(a.Addr, b.Addr);
+    }
 }

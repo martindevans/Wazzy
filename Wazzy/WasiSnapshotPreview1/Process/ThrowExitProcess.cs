@@ -8,14 +8,14 @@ namespace Wazzy.WasiSnapshotPreview1.Process;
 public class ThrowExitProcess
     : IWasiExitProcess
 {
-    public void ProcExit(Caller caller, uint code)
+    public void ProcExit(Caller caller, int code)
     {
         throw new ThrowExitProcessException(code);
     }
 }
 
-public class ThrowExitProcessException(uint exitCode)
+public class ThrowExitProcessException(int exitCode)
     : Exception
 {
-    public uint ExitCode { get; } = exitCode;
+    public int ExitCode { get; } = exitCode;
 }

@@ -1,8 +1,6 @@
 ﻿using Wasmtime;
 using Wazzy.Async;
 using Wazzy.Async.Extensions;
-using Wazzy.Extensions;
-using Wazzy.WasiSnapshotPreview1.Process;
 
 namespace Wazzy.Tests;
 
