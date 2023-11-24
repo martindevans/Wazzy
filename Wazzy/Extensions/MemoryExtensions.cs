@@ -6,14 +6,28 @@ internal static class MemoryExtensions
 {
     private static void GrowToByteSize(this Memory memory, long finalBytesSize)
     {
+        // Ensure memory has at least 1 page!
         var currentBytesSize = memory.GetLength();
+        if (currentBytesSize == 0)
+        {
+            memory.Grow(1);
+            currentBytesSize = memory.GetLength();
+        }
+
+        // How many bytes do we need to grow by?
         var deltaBytes = finalBytesSize - currentBytesSize;
 
+        // Easy early exit if we don't actually need any more
         if (deltaBytes <= 0)
             return;
 
+        // Determine the size of a page
         var pageSize = currentBytesSize / memory.GetSize();
+
+        // And how many pages are needed
         var deltaPages = (long)Math.Ceiling(deltaBytes / (double)pageSize);
+
+        // Grow
         memory.Grow(deltaPages);
     }
 

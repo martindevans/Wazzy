@@ -5,6 +5,9 @@ using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
 
+/// <summary>
+/// Base class for file systems which fail all operations except writing to stdout/stderr
+/// </summary>
 public abstract class WriteToOutputFilesystem
     : IWasiFileSystem
 {
@@ -172,16 +175,38 @@ public abstract class WriteToOutputFilesystem
     }
 }
 
+/// <summary>
+/// Allow writing to Console.Out/Console.Error from inside WASM context
+/// </summary>
 public class WriteToConsoleFilesystem
+    : WriteToTextWriterFilesystem
+{
+    public WriteToConsoleFilesystem()
+        : base(Console.Out, Console.Error)
+    {
+        
+    }
+}
+
+public class WriteToTextWriterFilesystem
     : WriteToOutputFilesystem
 {
+    private readonly TextWriter _stdOut;
+    private readonly TextWriter _stdErr;
+
+    public WriteToTextWriterFilesystem(TextWriter stdOut, TextWriter stdErr)
+    {
+        _stdOut = stdOut;
+        _stdErr = stdErr;
+    }
+
     protected override void StdOut(string message)
     {
-        Console.WriteLine(message);
+        _stdOut.Write(message);
     }
 
     protected override void StdErr(string message)
     {
-        Console.Error.WriteLine(message);
+        _stdErr.Write(message);
     }
 }

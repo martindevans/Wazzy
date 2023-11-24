@@ -4,6 +4,9 @@ using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
 
+/// <summary>
+/// All FS operations fail, except for writing to stdout/stderr which succeed but do not print anywhere
+/// </summary>
 public class NullFilesystem
     : IWasiFileSystem
 {
