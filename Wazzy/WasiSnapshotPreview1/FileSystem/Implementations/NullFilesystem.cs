@@ -159,4 +159,9 @@ public class NullFilesystem
     {
         return WasiError.EBADF;
     }
+
+    public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to)
+    {
+        return WasiError.EBADF;
+    }
 }

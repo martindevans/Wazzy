@@ -136,4 +136,9 @@ public class VirtualFileSystem
     {
         throw new NotImplementedException();
     }
+
+    public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to)
+    {
+        throw new NotImplementedException();
+    }
 }

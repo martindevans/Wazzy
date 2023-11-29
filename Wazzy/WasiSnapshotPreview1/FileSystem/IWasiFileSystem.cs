@@ -256,6 +256,8 @@ public interface IWasiFileSystem
 
     protected WasiError PathSymLink(Caller caller, ReadOnlySpan<byte> oldPath, FileDescriptor fileDescriptor, ReadOnlySpan<byte> newPath);
 
+    protected WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to);
+
     ///// <summary>
     ///// Check how many bytes can be read from the given file descriptor. This is used by poll_oneoff in IVirtualEventPoll.
     ///// </summary>
@@ -535,6 +537,14 @@ public interface IWasiFileSystem
                 new ReadonlyBuffer<byte>(oldPathPtr, (uint)oldPathLen).GetSpan(c),
                 new FileDescriptor(fd),
                 new ReadonlyBuffer<byte>(newPathPtr, (uint)newPathLen).GetSpan(c)
+            )
+        );
+
+        linker.DefineFunction(Module, " fd_renumber",
+            (Caller c, int fd, int to) => (int)FdRenumber(
+                c,
+                new FileDescriptor(fd),
+                new FileDescriptor(to)
             )
         );
     }
