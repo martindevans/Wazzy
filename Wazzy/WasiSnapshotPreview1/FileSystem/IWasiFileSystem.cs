@@ -540,7 +540,7 @@ public interface IWasiFileSystem
             )
         );
 
-        linker.DefineFunction(Module, " fd_renumber",
+        linker.DefineFunction(Module, "fd_renumber",
             (Caller c, int fd, int to) => (int)FdRenumber(
                 c,
                 new FileDescriptor(fd),
