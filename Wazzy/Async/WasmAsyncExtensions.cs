@@ -109,17 +109,12 @@ public static class WasmAsyncExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static SavedStack StopUnwind(this Instance instance)
     {
-        var memory = instance.GetDefaultMemory();
-
         // Finish the async unwind
         instance.AsyncifyStopUnwind();
 
-        // Copy rewind stack out to C# array
+        // Save stash data, leaving the unwind stack in place
         var savedStackData = SavedStackData.Get();
-        memory.ReadMemory(savedStackData.Data);
-
-        // Restore memory to the correct state
-        memory.WriteMemory(_unwindStash.Value);
+        _unwindStash.Value.CopyTo(savedStackData.Data.AsSpan());
 
         return new SavedStack(savedStackData);
     }
@@ -136,22 +131,17 @@ public static class WasmAsyncExtensions
         if (stack.IsNull)
             throw new ArgumentException("Stack is null", nameof(stack));
 
-        var memory = instance.GetDefaultMemory();
-
         // Check state is as expected
         instance.GetAsyncState().AssertState(AsyncState.None);
 
-        // Copy out whatever is in memory into stash
-        memory.ReadMemory(_rewindStash.Value);
-
-        // Write rewind stack into free space
-        memory.WriteMemory(stack.Value);
-
-        // Trigger async rewind
-        instance.AsyncifyStartRewind(AsyncStackStructAddr);
+        // Put the "stash" back into place
+        stack.Value.CopyTo(_rewindStash.Value);
 
         // Dispose the stack, ensuring it cannot be used again
         stack.Dispose();
+
+        // Trigger async rewind
+        instance.AsyncifyStartRewind(AsyncStackStructAddr);
     }
 
     /// <summary>

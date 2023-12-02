@@ -8,7 +8,6 @@ internal class SavedStackData
     private static readonly ConcurrentBag<SavedStackData> _pool = new();
 
     public byte[] Data { get; set; }
-
     public int Epoch { get; private set; }
 
     private SavedStackData()
@@ -39,6 +38,9 @@ internal class SavedStackData
 /// </summary>
 public readonly struct SavedStack
 {
+    // Implementation note, this is **NOT** actually the stack data! While the program is suspended the rewind stack is left in-place
+    // in the WASM memory, ready to use for resuming. This actually contains the non-stack data that was saved from that location in memory.
+
     private readonly SavedStackData _data;
     private readonly int _epoch;
 
