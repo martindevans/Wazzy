@@ -11,8 +11,8 @@ public static class WasmAsyncExtensions
 
     // These "stashes" are used to store memory from the time unwinding/rewinding starts to when it finishes.
     // This is a very quick operation, just as long as it takes to walk up/down the WASM stack.
-    private static readonly ThreadLocal<byte[]> _unwindStash = new(() => new byte[StashSize]);
-    private static readonly ThreadLocal<byte[]> _rewindStash = new(() => new byte[StashSize]);
+    private static readonly ThreadLocal<SavedStackData?> _unwindStash = new(false);
+    private static readonly ThreadLocal<SavedStackData?> _rewindStash = new(false);
 
     #region memory addresses
     /// <summary>
@@ -76,8 +76,11 @@ public static class WasmAsyncExtensions
         // Check state is as expected
         caller.GetAsyncState().AssertState(AsyncState.None);
 
-        // Copy memory into stash to free up some space
-        memory.ReadMemory(_unwindStash.Value);
+        // Read memory into stash
+        var stash = SavedStackData.Get();
+        stash.Timer.Restart();
+        memory.ReadMemory(stash.Data);
+        _unwindStash.Value = stash;
 
         // Write the execution state number
         memory.WriteInt32(ExecutionStateAddr, executionState);
@@ -112,9 +115,14 @@ public static class WasmAsyncExtensions
         // Finish the async unwind
         instance.AsyncifyStopUnwind();
 
-        // Save stash data, leaving the unwind stack in place
-        var savedStackData = SavedStackData.Get();
-        _unwindStash.Value.CopyTo(savedStackData.Data.AsSpan());
+        // Grab stashed data saved at start of unwind
+        var savedStackData = _unwindStash.Value;
+        _unwindStash.Value = null;
+        if (savedStackData == null)
+            throw new InvalidOperationException("StopUnwind cannot be called when there is no unwind in progress");
+
+        // Measure elapsed time
+        savedStackData.Timer.Stop();
 
         return new SavedStack(savedStackData);
     }
@@ -130,15 +138,13 @@ public static class WasmAsyncExtensions
     {
         if (stack.IsNull)
             throw new ArgumentException("Stack is null", nameof(stack));
+        stack.CheckEpoch();
 
         // Check state is as expected
         instance.GetAsyncState().AssertState(AsyncState.None);
 
         // Put the "stash" back into place
-        stack.Value.CopyTo(_rewindStash.Value);
-
-        // Dispose the stack, ensuring it cannot be used again
-        stack.Dispose();
+        _rewindStash.Value = stack.Data;
 
         // Trigger async rewind
         instance.AsyncifyStartRewind(AsyncStackStructAddr);
@@ -157,8 +163,15 @@ public static class WasmAsyncExtensions
         // Stop the async rewind
         caller.AsyncifyStopRewind();
 
+        // Get the saved stash data
+        var saved = _rewindStash.Value;
+        if (saved == null)
+            throw new InvalidOperationException("Cannot StopRewind when not rewind is in progress");
+        _rewindStash.Value = null;
+
         // Restore stashed memory
-        memory.WriteMemory(_rewindStash.Value);
+        memory.WriteMemory(saved.Data);
+        SavedStackData.Return(saved);
     }
     #endregion
 

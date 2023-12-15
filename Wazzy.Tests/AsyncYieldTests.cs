@@ -83,6 +83,7 @@ public sealed class AsyncYieldTests
         while (instance.GetAsyncState() == AsyncState.Suspending)
         {
             var stack = instance.StopUnwind();
+            Console.WriteLine($"Unwind:{stack.UnwindTime.TotalMilliseconds}ms");
             instance.StartRewind(stack);
 
             result = call(default);
@@ -119,6 +120,7 @@ public sealed class AsyncYieldTests
         while (instance.GetAsyncState() == AsyncState.Suspending)
         {
             var stack = instance.StopUnwind();
+            Console.WriteLine($"Unwind:{stack.UnwindTime.TotalMilliseconds}ms");
             instance.StartRewind(stack);
 
             result = call(default);
@@ -160,6 +162,8 @@ public sealed class AsyncYieldTests
         var call = instance.GetFunction<int, int>("run")!;
         call(10);
         var stack = instance.StopUnwind();
+
+        Console.WriteLine($"Unwind:{stack.UnwindTime.TotalMilliseconds}ms");
 
         // Resume once
         instance.StartRewind(stack);
@@ -212,6 +216,8 @@ public sealed class AsyncYieldTests
         // Catch unwind
         var stack = instance.StopUnwind();
 
+        Console.WriteLine($"Unwind:{stack.UnwindTime.TotalMilliseconds}ms");
+
         // Resume
         instance.StartRewind(stack);
 
@@ -254,6 +260,8 @@ public sealed class AsyncYieldTests
 
         // Catch unwind
         var stack = instance.StopUnwind();
+
+        Console.WriteLine($"Unwind:{stack.UnwindTime.TotalMilliseconds}ms");
 
         // Resume
         instance.StartRewind(stack);
