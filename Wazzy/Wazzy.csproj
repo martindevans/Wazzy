@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Wasmtime" Version="15.0.0" />
+    <PackageReference Include="Wasmtime" Version="16.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,6 +4,18 @@ namespace Wazzy.Async.Extensions;
 
 public static class CallerExtensions
 {
+    internal static AsyncState? GetAsyncState(this Caller caller, ref Func<int>? getter)
+    {
+        if (getter == null)
+        {
+            getter = caller.GetFunction("asyncify_get_state")?.WrapFunc<int>();
+            if (getter == null)
+                return default;
+        }
+
+        return (AsyncState)getter();
+    }
+
     /// <summary>
     /// Get the current async state of the WASM instance behind this caller.
     /// </summary>
@@ -11,9 +23,8 @@ public static class CallerExtensions
     /// <returns></returns>
     public static AsyncState? GetAsyncState(this Caller caller)
     {
-        return (AsyncState?)caller.GetFunction("asyncify_get_state")
-                                 ?.WrapFunc<int>()
-                                 ?.Invoke();
+        Func<int>? getter = null;
+        return GetAsyncState(caller, ref getter);
     }
 
     /// <summary>
@@ -33,17 +44,24 @@ public static class CallerExtensions
             ?? throw new InvalidOperationException("Cannot get exported memory");
     }
 
-    internal static void AsyncifyStartUnwind(this Caller caller, int addr)
+    internal static void AsyncifyStartUnwind(this Caller caller, int addr, ref Func<int>? getter)
     {
-        caller.GetAsyncState().AssertState(AsyncState.None);
+        caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
         caller.GetFunction("asyncify_start_unwind")!.WrapAction<int>()!.Invoke(addr);
-        caller.GetAsyncState().AssertState(AsyncState.Suspending);
+
+
+#if DEBUG
+        caller.GetAsyncState(ref getter).AssertState(AsyncState.Suspending);
+#endif
     }
 
-    internal static void AsyncifyStopRewind(this Caller caller)
+    internal static void AsyncifyStopRewind(this Caller caller, ref Func<int>? getter)
     {
-        caller.GetAsyncState().AssertState(AsyncState.Resuming);
+        caller.GetAsyncState(ref getter).AssertState(AsyncState.Resuming);
         caller.GetFunction("asyncify_stop_rewind")!.WrapAction()!.Invoke();
-        caller.GetAsyncState().AssertState(AsyncState.None);
+
+#if DEBUG
+        caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
+#endif
     }
 }

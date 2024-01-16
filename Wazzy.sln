@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wazzy", "Wazzy\Wazzy.csproj", "{9BA94CBC-BF23-40EA-8093-7F010D6DF451}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Wazzy", "Wazzy\Wazzy.csproj", "{9BA94CBC-BF23-40EA-8093-7F010D6DF451}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wazzy.Tests", "Wazzy.Tests\Wazzy.Tests.csproj", "{9B8CD7D2-4059-4E38-8333-791A1C29043D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Wazzy.Tests", "Wazzy.Tests\Wazzy.Tests.csproj", "{9B8CD7D2-4059-4E38-8333-791A1C29043D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

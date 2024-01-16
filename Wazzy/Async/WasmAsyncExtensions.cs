@@ -6,8 +6,8 @@ namespace Wazzy.Async;
 
 public static class WasmAsyncExtensions
 {
-    // Save 512KB space for stack unwinding
-    internal const int StashSize = 1024 * 512;
+    // Save 256KB space for stack unwinding
+    internal const int StashSize = 1024 * 256;
 
     // These "stashes" are used to store memory from the time unwinding/rewinding starts to when it finishes.
     // This is a very quick operation, just as long as it takes to walk up/down the WASM stack.
@@ -74,7 +74,8 @@ public static class WasmAsyncExtensions
         var memory = caller.GetDefaultMemory();
 
         // Check state is as expected
-        caller.GetAsyncState().AssertState(AsyncState.None);
+        Func<int>? getter = null;
+        caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
 
         // Read memory into stash
         var stash = SavedStackData.Get();
@@ -100,7 +101,7 @@ public static class WasmAsyncExtensions
         }
 
         // Start async unwinding into memory
-        caller.AsyncifyStartUnwind(AsyncStackStructAddr);
+        caller.AsyncifyStartUnwind(AsyncStackStructAddr, ref getter);
     }
 
     /// <summary>
@@ -113,7 +114,8 @@ public static class WasmAsyncExtensions
     public static SavedStack StopUnwind(this Instance instance)
     {
         // Finish the async unwind
-        instance.AsyncifyStopUnwind();
+        Func<int>? getter = null;
+        instance.AsyncifyStopUnwind(ref getter);
 
         // Grab stashed data saved at start of unwind
         var savedStackData = _unwindStash.Value;
@@ -141,27 +143,29 @@ public static class WasmAsyncExtensions
         stack.CheckEpoch();
 
         // Check state is as expected
-        instance.GetAsyncState().AssertState(AsyncState.None);
+        Func<int>? getter = null;
+        instance.GetAsyncState(ref getter).AssertState(AsyncState.None);
 
         // Put the "stash" back into place
         _rewindStash.Value = stack.Data;
 
         // Trigger async rewind
-        instance.AsyncifyStartRewind(AsyncStackStructAddr);
+        instance.AsyncifyStartRewind(AsyncStackStructAddr, ref getter);
     }
 
     /// <summary>
     /// Stop rewinding into a WASM stack and continue execution normally
     /// </summary>
     /// <param name="caller"></param>
+    /// <param name="getter"></param>
     /// <exception cref="NotSupportedException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    private static void StopRewind(this Caller caller)
+    private static void StopRewind(this Caller caller, ref Func<int>? getter)
     {
         var memory = caller.GetDefaultMemory();
 
         // Stop the async rewind
-        caller.AsyncifyStopRewind();
+        caller.AsyncifyStopRewind(ref getter);
 
         // Get the saved stash data
         var saved = _rewindStash.Value;
@@ -247,7 +251,8 @@ public static class WasmAsyncExtensions
     public static int Resume(this Caller caller, out int executionState)
     {
         // If not rewinding just return 0, the first step in execution. Maybe we'll suspend later.
-        if (caller.GetAsyncState() != AsyncState.Resuming)
+        Func<int>? getter = null;
+        if (caller.GetAsyncState(ref getter) != AsyncState.Resuming)
         {
             executionState = 0;
             return 0;
@@ -257,7 +262,7 @@ public static class WasmAsyncExtensions
         executionState = caller.GetDefaultMemory().ReadInt32(ExecutionStateAddr);
 
         // Finish rewinding, ready to resume execution
-        StopRewind(caller);
+        StopRewind(caller, ref getter);
 
         return executionState;
     }

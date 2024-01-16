@@ -1,13 +1,17 @@
-﻿namespace Wazzy.Async;
+﻿using System.Runtime.InteropServices;
 
+namespace Wazzy.Async;
+
+[StructLayout(LayoutKind.Explicit)]
 internal struct AsyncStackStruct32
 {
-    public int StackStart;
-    public int StackEnd;
+    [FieldOffset(0)] public int StackStart;
+    [FieldOffset(4)] public int StackEnd;
 }
 
+[StructLayout(LayoutKind.Explicit)]
 internal struct AsyncStackStruct64
 {
-    public int StackStart;
-    public int StackEnd;
+    [FieldOffset(0)] public long StackStart;
+    [FieldOffset(8)] public long StackEnd;
 }
