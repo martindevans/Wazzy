@@ -180,7 +180,7 @@ public static class WasmAsyncExtensions
         if (saved.AllocatedBufferAddress.HasValue)
         {
             // Free the buffer lent to use by client code
-            caller.AsyncifyFreeBuffer(saved.AllocatedBufferAddress.Value);
+            caller.AsyncifyFreeBuffer(saved.AllocatedBufferAddress.Value, StashSize);
         }
         else
         {

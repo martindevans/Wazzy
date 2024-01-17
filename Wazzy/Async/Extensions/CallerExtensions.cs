@@ -85,8 +85,9 @@ public static class CallerExtensions
     /// </summary>
     /// <param name="caller"></param>
     /// <param name="addr"></param>
-    internal static void AsyncifyFreeBuffer(this Caller caller, int addr)
+    /// <param name="size"></param>
+    internal static void AsyncifyFreeBuffer(this Caller caller, int addr, int size)
     {
-        caller.GetFunction("asyncify_free_buffer")?.WrapAction<int>()?.Invoke(addr);
+        caller.GetFunction("asyncify_free_buffer")?.WrapAction<int, int>()?.Invoke(addr, size);
     }
 }
