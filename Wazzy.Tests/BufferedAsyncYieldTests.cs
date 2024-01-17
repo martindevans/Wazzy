@@ -5,10 +5,10 @@ using Wazzy.Async.Extensions;
 namespace Wazzy.Tests;
 
 [TestClass]
-public sealed class AsyncYieldTests
+public sealed class BufferedAsyncYieldTests
     : IDisposable
 {
-    private readonly WasmTestHelper _helper = new("Scripts/Simple_Async.wasm");
+    private readonly WasmTestHelper _helper = new("Scripts/SimpleWithBuffer_Async.wasm");
 
     private readonly List<(int, string)> _printCalls = new();
 
@@ -75,7 +75,7 @@ public sealed class AsyncYieldTests
     [TestMethod]
     public void SimpleAsyncCall()
     {
-        var instance = _helper.Instantiate();
+        var instance = _helper.Instantiate(100);
 
         var call = instance.GetFunction<int, int>("run")!;
         var result = call(10);

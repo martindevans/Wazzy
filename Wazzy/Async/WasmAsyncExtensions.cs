@@ -14,98 +14,10 @@ public static class WasmAsyncExtensions
     private static readonly ThreadLocal<SavedStackData?> _unwindStash = new(false);
     private static readonly ThreadLocal<SavedStackData?> _rewindStash = new(false);
 
-    #region memory addresses
-    /// <summary>
-    /// Data is packed into memory, starting at this address. Fields are:
-    /// - 4 bytes: execution state index
-    /// - 4 bytes: size of locals data
-    /// - 16 bytes: async stack structure
-    /// - N bytes: locals data
-    /// - (padding to 8 byte alignment)
-    /// - {stack data...}
-    /// </summary>
-    private const int BaseAddress = 16;
-    private const int ExecutionStateAddr = BaseAddress;
-    private const int LocalsSizeAddr = ExecutionStateAddr + 4;
-    private const int AsyncStackStructAddr = LocalsSizeAddr + 4;
-    private const int LocalsDataAddr = AsyncStackStructAddr + 16;
-
-    private static int GetAsyncStackStartAddr(int localsSize)
-    {
-        var x = LocalsDataAddr + localsSize;
-
-        // Move up to the next address aligned to 8
-        var addr = x + 7 & -8;
-
-        return addr;
-    }
-
-    private static ref AsyncStackStruct32 GetAsyncStackStruct32(Memory memory)
-    {
-        unsafe
-        {
-            var ptr = memory.GetPointer() + AsyncStackStructAddr;
-            return ref *((AsyncStackStruct32*)ptr.ToPointer());
-        }
-    }
-
-    private static ref AsyncStackStruct64 GetAsyncStackStruct64(Memory memory)
-    {
-        unsafe
-        {
-            var ptr = memory.GetPointer() + AsyncStackStructAddr;
-            return ref *((AsyncStackStruct64*)ptr.ToPointer());
-        }
-    }
-    #endregion
-
     #region low level state transitions
     /// <summary>
-    /// Unwind out of a WASM context, must call `StopUnwind` as soon as execution returns to C#
-    /// </summary>
-    /// <param name="caller"></param>
-    /// <param name="executionState">Execution state value to save into memory</param>
-    /// <param name="localSize">Size of the locals data</param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
-    /// <exception cref="InvalidOperationException"></exception>
-    private static void StartUnwind(this Caller caller, int executionState, int localSize)
-    {
-        var memory = caller.GetDefaultMemory();
-
-        // Check state is as expected
-        Func<int>? getter = null;
-        caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
-
-        // Read memory into stash
-        var stash = SavedStackData.Get();
-        stash.Timer.Restart();
-        memory.ReadMemory(stash.Data);
-        _unwindStash.Value = stash;
-
-        // Write the execution state number
-        memory.WriteInt32(ExecutionStateAddr, executionState);
-
-        // Set up rewind structure (start and end of asyncify stack)
-        if (memory.Is64Bit)
-        {
-            ref var stackStruct = ref GetAsyncStackStruct64(memory);
-            stackStruct.StackStart = GetAsyncStackStartAddr(localSize);
-            stackStruct.StackEnd = StashSize;
-        }
-        else
-        {
-            ref var stackStruct = ref GetAsyncStackStruct32(memory);
-            stackStruct.StackStart = GetAsyncStackStartAddr(localSize);
-            stackStruct.StackEnd = StashSize;
-        }
-
-        // Start async unwinding into memory
-        caller.AsyncifyStartUnwind(AsyncStackStructAddr, ref getter);
-    }
-
-    /// <summary>
-    /// Stop unwinding and retrieve the suspended WASM call stack
+    /// Stop unwinding and retrieve the suspended WASM call stack.
+    /// This must be called after a WASM method was called by C# and has returned to C# due to an async suspend.
     /// </summary>
     /// <param name="instance"></param>
     /// <returns></returns>
@@ -122,9 +34,6 @@ public static class WasmAsyncExtensions
         _unwindStash.Value = null;
         if (savedStackData == null)
             throw new InvalidOperationException("StopUnwind cannot be called when there is no unwind in progress");
-
-        // Measure elapsed time
-        savedStackData.Timer.Stop();
 
         return new SavedStack(savedStackData);
     }
@@ -146,36 +55,14 @@ public static class WasmAsyncExtensions
         Func<int>? getter = null;
         instance.GetAsyncState(ref getter).AssertState(AsyncState.None);
 
-        // Put the "stash" back into place
+        // Put the stash somewhere that it can be found when the rewind is complete
         _rewindStash.Value = stack.Data;
 
+        // Create the memory map to locate the correct address
+        var state = new AsyncMemoryState(stack.Data.AllocatedBufferAddress ?? 0, StashSize);
+
         // Trigger async rewind
-        instance.AsyncifyStartRewind(AsyncStackStructAddr, ref getter);
-    }
-
-    /// <summary>
-    /// Stop rewinding into a WASM stack and continue execution normally
-    /// </summary>
-    /// <param name="caller"></param>
-    /// <param name="getter"></param>
-    /// <exception cref="NotSupportedException"></exception>
-    /// <exception cref="InvalidOperationException"></exception>
-    private static void StopRewind(this Caller caller, ref Func<int>? getter)
-    {
-        var memory = caller.GetDefaultMemory();
-
-        // Stop the async rewind
-        caller.AsyncifyStopRewind(ref getter);
-
-        // Get the saved stash data
-        var saved = _rewindStash.Value;
-        if (saved == null)
-            throw new InvalidOperationException("Cannot StopRewind when not rewind is in progress");
-        _rewindStash.Value = null;
-
-        // Restore stashed memory
-        memory.WriteMemory(saved.Data);
-        SavedStackData.Return(saved);
+        instance.AsyncifyStartRewind(state.GetRewindStructAddress(), ref getter);
     }
     #endregion
 
@@ -193,16 +80,12 @@ public static class WasmAsyncExtensions
         if (caller.GetAsyncState() != AsyncState.Resuming)
             return null;
 
+        // Get memory state
         var memory = caller.GetDefaultMemory();
-
-        // Sanity check the size of the locals data
-        int localSize;
-        unsafe { localSize = sizeof(T); }
-        if (memory.ReadInt32(LocalsSizeAddr) != localSize)
-            throw new InvalidOperationException($"Attempted to read locals data {typeof(T).Name}, but size does not match! Wrong type?");
+        var state = new AsyncMemoryState(_rewindStash.Value!.AllocatedBufferAddress ?? 0, StashSize);
 
         // Grab the data from where it should be in memory
-        return memory.Read<T>(LocalsDataAddr);
+        return state.ReadLocals<T>(memory);
     }
 
     /// <summary>
@@ -215,21 +98,51 @@ public static class WasmAsyncExtensions
     public static void Suspend<T>(this Caller caller, T locals, int executionState)
         where T : unmanaged
     {
-        var memory = caller.GetDefaultMemory();
+        // Check state is as expected
+        Func<int>? getter = null;
+        caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
 
+        // Get some things we need
+        var memory = caller.GetDefaultMemory();
         int localSize;
         unsafe { localSize = sizeof(T); }
 
-        // Begin unwinding stack
-        StartUnwind(caller, executionState, localSize);
+        // Allocate state object
+        var stash = SavedStackData.Get();
+        _unwindStash.Value = stash;
+
+        // Get a buffer, there are two ways to do this:
+        // - Ask the wasm code to malloc a buffer
+        // - Failing that, copy out the first chunk of memory to a temporary stash, and use that space for unwinding
+        var allocated = caller.AsyncifyMallocBuffer(StashSize);
+        AsyncMemoryState state;
+        if (allocated.HasValue)
+        {
+            state = new AsyncMemoryState(allocated.Value, StashSize);
+            stash.AllocatedBufferAddress = allocated;
+        }
+        else
+        {
+            // No buffer could be allocated, read out memory into stash so we can use that
+            memory.ReadMemory(stash.Data);
+            state = new AsyncMemoryState(0, StashSize);
+        }
+
+        // Write the execution state number
+        state.WriteExecutionStateNumber(memory, executionState);
+
+        // setup the rewind structure
+        state.WriteRewindStruct(memory, localSize);
+
+        // Start async unwinding into memory
+        caller.AsyncifyStartUnwind(state.GetRewindStructAddress(), ref getter);
 
         // Copy locals into memory
-        memory.WriteInt32(LocalsSizeAddr, localSize);
-        memory.Write(LocalsDataAddr, locals);
+        state.WriteLocals(memory, localSize, locals);
 
         // Increment state number
-        var state = memory.ReadInt32(ExecutionStateAddr);
-        memory.WriteInt32(ExecutionStateAddr, state + 1);
+        state.IncrementStateNumber(memory);
+        
     }
 
     /// <summary>
@@ -258,11 +171,34 @@ public static class WasmAsyncExtensions
             return 0;
         }
 
-        // Read the execution state from memory
-        executionState = caller.GetDefaultMemory().ReadInt32(ExecutionStateAddr);
+        // Get the saved stash data
+        var saved = _rewindStash.Value;
+        if (saved == null)
+            throw new InvalidOperationException("Cannot StopRewind when not rewind is in progress");
+        _rewindStash.Value = null;
 
-        // Finish rewinding, ready to resume execution
-        StopRewind(caller, ref getter);
+        // Get memory state
+        var memory = caller.GetDefaultMemory();
+        var state = new AsyncMemoryState(saved.AllocatedBufferAddress ?? 0, StashSize);
+
+        // Read the execution state from memory
+        executionState = state.ReadExecutionStateNumber(memory);
+
+        // Stop the async rewind
+        caller.AsyncifyStopRewind(ref getter);
+
+        // Handle buffer cleanup
+        if (saved.AllocatedBufferAddress.HasValue)
+        {
+            // Free the buffer lent to use by client code
+            caller.AsyncifyFreeBuffer(saved.AllocatedBufferAddress.Value);
+        }
+        else
+        {
+            // Restore the stashed memory we copied out
+            memory.WriteMemory(saved.Data);
+        }
+        SavedStackData.Return(saved);
 
         return executionState;
     }

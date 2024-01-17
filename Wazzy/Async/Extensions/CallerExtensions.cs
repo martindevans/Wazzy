@@ -64,4 +64,29 @@ public static class CallerExtensions
         caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
 #endif
     }
+
+    /// <summary>
+    /// Allocate a buffer of the given size
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
+    internal static int? AsyncifyMallocBuffer(this Caller caller, int size)
+    {
+        var ptr = caller.GetFunction("asyncify_malloc_buffer")?.WrapFunc<int, int>()?.Invoke(size) ?? -1;
+        if (ptr < 0)
+            return null;
+
+        return ptr;
+    }
+
+    /// <summary>
+    /// Free a previously allocated buffer (with `asyncify_malloc_buffer`) at the given address
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <param name="addr"></param>
+    internal static void AsyncifyFreeBuffer(this Caller caller, int addr)
+    {
+        caller.GetFunction("asyncify_free_buffer")?.WrapAction<int>()?.Invoke(addr);
+    }
 }

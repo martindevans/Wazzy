@@ -46,9 +46,13 @@ public class WasmTestHelper
         return feature;
     }
 
-    public Instance Instantiate()
+    public Instance Instantiate(int grow = 0)
     {
         var instance = Linker.Instantiate(Store, Module);
+
+        if (grow > 0)
+            instance.GetMemory("memory")!.Grow(grow);
+
         return instance;
     }
 }

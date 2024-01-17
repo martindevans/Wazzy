@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace Wazzy.Async;
 
@@ -8,9 +7,10 @@ internal class SavedStackData
     private const int MaxPoolSize = 16;
     private static readonly ConcurrentBag<SavedStackData> _pool = [];
 
-    public byte[] Data { get; set; }
+    public int? AllocatedBufferAddress { get; set; }
+
+    public byte[] Data { get; }
     public int Epoch { get; private set; }
-    public Stopwatch Timer { get; } = new();
 
     private SavedStackData()
     {
@@ -32,6 +32,7 @@ internal class SavedStackData
     public static void Return(SavedStackData stack)
     {
         stack.Epoch++;
+        stack.AllocatedBufferAddress = default;
 
         // Once the epoch number gets too big discard this item
         if (stack.Epoch >= int.MaxValue - 100)
@@ -54,18 +55,6 @@ public readonly struct SavedStack
     private readonly int _epoch;
 
     internal bool IsNull => Data == null;
-
-    /// <summary>
-    /// Get the amount of time taken to 
-    /// </summary>
-    public TimeSpan UnwindTime
-    {
-        get
-        {
-            CheckEpoch();
-            return Data.Timer.Elapsed;
-        }
-    }
 
     /// <summary>
     /// Represents a stack that has been rewound out of a WASM Instance and may be resumed.
