@@ -222,7 +222,7 @@ public sealed class AsyncYieldTests
         }
         catch (WasmtimeException ex)
         {
-            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidOperationException));
+            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidCastException));
             return;
         }
 

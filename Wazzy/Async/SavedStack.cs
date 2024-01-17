@@ -7,10 +7,13 @@ internal class SavedStackData
     private const int MaxPoolSize = 16;
     private static readonly ConcurrentBag<SavedStackData> _pool = [];
 
-    public int? AllocatedBufferAddress { get; set; }
-
-    public byte[] Data { get; }
     public int Epoch { get; private set; }
+
+    public int? AllocatedBufferAddress { get; set; }
+    public byte[] Data { get; }
+
+    public object? Locals { get; set; }
+    public int ExecutionState { get; set; }
 
     private SavedStackData()
     {

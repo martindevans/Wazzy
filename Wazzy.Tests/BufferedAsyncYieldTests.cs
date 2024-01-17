@@ -75,7 +75,7 @@ public sealed class BufferedAsyncYieldTests
     [TestMethod]
     public void SimpleAsyncCall()
     {
-        var instance = _helper.Instantiate(100);
+        var instance = _helper.Instantiate();
 
         var call = instance.GetFunction<int, int>("run")!;
         var result = call(10);
@@ -222,7 +222,7 @@ public sealed class BufferedAsyncYieldTests
         }
         catch (WasmtimeException ex)
         {
-            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidOperationException));
+            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidCastException));
             return;
         }
 

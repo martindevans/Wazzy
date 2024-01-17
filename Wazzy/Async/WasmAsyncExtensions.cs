@@ -74,18 +74,17 @@ public static class WasmAsyncExtensions
     /// <param name="caller"></param>
     /// <returns></returns>
     public static T? GetSuspendedLocals<T>(this Caller caller)
-        where T : unmanaged
+        where T : struct
     {
         // If we're not rewinding then there's nothing to restore.
         if (caller.GetAsyncState() != AsyncState.Resuming)
-            return null;
-
-        // Get memory state
-        var memory = caller.GetDefaultMemory();
-        var state = new AsyncMemoryState(_rewindStash.Value!.AllocatedBufferAddress ?? 0, StashSize);
+            return default;
 
         // Grab the data from where it should be in memory
-        return state.ReadLocals<T>(memory);
+        var l = _rewindStash.Value!.Locals;
+        if (l == null)
+            return default;
+        return (T)l;
     }
 
     /// <summary>
@@ -96,7 +95,7 @@ public static class WasmAsyncExtensions
     /// <param name="locals">The locals to save, can be restored when resuming with GetSuspendedLocals()</param>
     /// <param name="executionState">The `executionState` that was previously output from `Resume`</param>
     public static void Suspend<T>(this Caller caller, T locals, int executionState)
-        where T : unmanaged
+        where T : struct
     {
         // Check state is as expected
         Func<int>? getter = null;
@@ -104,8 +103,6 @@ public static class WasmAsyncExtensions
 
         // Get some things we need
         var memory = caller.GetDefaultMemory();
-        int localSize;
-        unsafe { localSize = sizeof(T); }
 
         // Allocate state object
         var stash = SavedStackData.Get();
@@ -129,20 +126,16 @@ public static class WasmAsyncExtensions
         }
 
         // Write the execution state number
-        state.WriteExecutionStateNumber(memory, executionState);
+        stash.ExecutionState = executionState + 1;
 
         // setup the rewind structure
-        state.WriteRewindStruct(memory, localSize);
+        state.WriteRewindStruct(memory);
 
         // Start async unwinding into memory
         caller.AsyncifyStartUnwind(state.GetRewindStructAddress(), ref getter);
 
-        // Copy locals into memory
-        state.WriteLocals(memory, localSize, locals);
-
-        // Increment state number
-        state.IncrementStateNumber(memory);
-        
+        // Save locals in stash
+        stash.Locals = locals;
     }
 
     /// <summary>
@@ -177,12 +170,8 @@ public static class WasmAsyncExtensions
             throw new InvalidOperationException("Cannot StopRewind when not rewind is in progress");
         _rewindStash.Value = null;
 
-        // Get memory state
-        var memory = caller.GetDefaultMemory();
-        var state = new AsyncMemoryState(saved.AllocatedBufferAddress ?? 0, StashSize);
-
-        // Read the execution state from memory
-        executionState = state.ReadExecutionStateNumber(memory);
+        // Get current execution state
+        executionState = saved.ExecutionState;
 
         // Stop the async rewind
         caller.AsyncifyStopRewind(ref getter);
@@ -196,6 +185,7 @@ public static class WasmAsyncExtensions
         else
         {
             // Restore the stashed memory we copied out
+            var memory = caller.GetDefaultMemory();
             memory.WriteMemory(saved.Data);
         }
         SavedStackData.Return(saved);
