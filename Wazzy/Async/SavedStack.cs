@@ -34,14 +34,16 @@ internal class SavedStackData
 
     public static void Return(SavedStackData stack)
     {
+        // Invalid all handles
         stack.Epoch++;
+
+        // Reset
         stack.AllocatedBufferAddress = default;
+        stack.Locals = null;
+        stack.ExecutionState = 0;
 
-        // Once the epoch number gets too big discard this item
-        if (stack.Epoch >= int.MaxValue - 100)
-            return;
-
-        if (_pool.Count < MaxPoolSize)
+        // Add this item to the pool if possible
+        if (_pool.Count < MaxPoolSize && stack.Epoch < int.MaxValue - 100)
             _pool.Add(stack);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Wasmtime;
+﻿using System.Diagnostics;
+using Wasmtime;
 using Wazzy.Async.Extensions;
 using Wazzy.Extensions;
 
@@ -32,8 +33,7 @@ public static class WasmAsyncExtensions
         // Grab stashed data saved at start of unwind
         var savedStackData = _unwindStash.Value;
         _unwindStash.Value = null;
-        if (savedStackData == null)
-            throw new InvalidOperationException("StopUnwind cannot be called when there is no unwind in progress");
+        Debug.Assert(savedStackData != null);
 
         return new SavedStack(savedStackData);
     }
@@ -74,17 +74,13 @@ public static class WasmAsyncExtensions
     /// <param name="caller"></param>
     /// <returns></returns>
     public static T? GetSuspendedLocals<T>(this Caller caller)
-        where T : struct
     {
         // If we're not rewinding then there's nothing to restore.
         if (caller.GetAsyncState() != AsyncState.Resuming)
             return default;
 
-        // Grab the data from where it should be in memory
-        var l = _rewindStash.Value!.Locals;
-        if (l == null)
-            return default;
-        return (T)l;
+        // Return locals data previously saved
+        return (T?)_rewindStash.Value!.Locals;
     }
 
     /// <summary>
@@ -166,8 +162,7 @@ public static class WasmAsyncExtensions
 
         // Get the saved stash data
         var saved = _rewindStash.Value;
-        if (saved == null)
-            throw new InvalidOperationException("Cannot StopRewind when not rewind is in progress");
+        Debug.Assert(saved != null);
         _rewindStash.Value = null;
 
         // Get current execution state

@@ -4,14 +4,13 @@ namespace Wazzy.Async.Extensions;
 
 public static class InstanceExtensions
 {
-    internal static AsyncState? GetAsyncState(this Instance instance, ref Func<int>? getter)
+    internal static AsyncState GetAsyncState(this Instance instance, ref Func<int>? getter)
     {
         if (getter == null)
         {
             getter = instance.GetFunction("asyncify_get_state")?.WrapFunc<int>();
-
             if (getter == null)
-                return default;
+                throw new InvalidOperationException("Cannot `GetAsyncState()` - instance is not async capable");
         }
 
         return (AsyncState)getter();
@@ -22,7 +21,7 @@ public static class InstanceExtensions
     /// </summary>
     /// <param name="instance"></param>
     /// <returns></returns>
-    public static AsyncState? GetAsyncState(this Instance instance)
+    public static AsyncState GetAsyncState(this Instance instance)
     {
         Func<int>? _ = null;
         return instance.GetAsyncState(ref _);
@@ -35,7 +34,11 @@ public static class InstanceExtensions
     /// <returns></returns>
     public static bool IsAsyncCapable(this Instance instance)
     {
-        return instance.GetFunction("asyncify_start_unwind") != null;
+        return instance.GetFunction("asyncify_start_unwind") != null
+            && instance.GetFunction("asyncify_stop_unwind") != null
+            && instance.GetFunction("asyncify_start_rewind") != null
+            && instance.GetFunction("asyncify_stop_rewind") != null
+            && instance.GetFunction("asyncify_get_state") != null;
     }
 
     internal static void AsyncifyStopUnwind(this Instance instance, ref Func<int>? getter)

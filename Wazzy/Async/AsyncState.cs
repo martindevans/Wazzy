@@ -23,9 +23,9 @@ public enum AsyncState
 
 internal static class AsyncStateExtensions
 {
-    public static void AssertState(this AsyncState? actual, AsyncState expected)
+    public static void AssertState(this AsyncState actual, AsyncState expected)
     {
         if (expected != actual)
-            throw new InvalidOperationException($"Incorrect WASM Async State!. Expected:{expected}, Actual:{actual?.ToString() ?? "null"}");
+            throw new InvalidOperationException($"Incorrect WASM Async State!. Expected:{expected}, Actual:{actual}");
     }
 }

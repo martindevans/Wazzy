@@ -1,4 +1,6 @@
-﻿using Wazzy.Interop;
+﻿using Wazzy.Async.Extensions;
+using Wazzy.Async;
+using Wazzy.Interop;
 
 namespace Wazzy.Tests;
 
@@ -11,6 +13,22 @@ public sealed class InteropTests
     public void Dispose()
     {
         _helper.Dispose();
+    }
+
+    [TestMethod]
+    public void IsAsyncCapable()
+    {
+        var instance = _helper.Instantiate();
+
+        Assert.IsFalse(instance.IsAsyncCapable());
+    }
+
+    [TestMethod]
+    public void BasicAsyncState()
+    {
+        var instance = _helper.Instantiate();
+
+        Assert.ThrowsException<InvalidOperationException>(() => instance.GetAsyncState());
     }
 
     [TestMethod]

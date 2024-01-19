@@ -21,11 +21,8 @@ internal static class MemoryExtensions
         if (deltaBytes <= 0)
             return;
 
-        // Determine the size of a page
-        var pageSize = currentBytesSize / memory.GetSize();
-
         // And how many pages are needed
-        var deltaPages = (long)Math.Ceiling(deltaBytes / (double)pageSize);
+        var deltaPages = (long)Math.Ceiling(deltaBytes / (double)Memory.PageSize);
 
         // Grow
         memory.Grow(deltaPages);

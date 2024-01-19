@@ -18,7 +18,7 @@ public sealed class BufferedAsyncYieldTests
         _helper.Linker.DefineFunction("spectest", "print", (Caller call, int arg) =>
         {
             // Get or restore locals
-            (byte, long now) locals = call.GetSuspendedLocals<(byte, long)>()
+            (byte, long now) locals = call.GetSuspendedLocals<(byte, long)?>()
                                    ?? (0, DateTime.UtcNow.Ticks);
 
             // Do some setup stuff. This happens on every pass!

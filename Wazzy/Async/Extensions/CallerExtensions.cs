@@ -4,13 +4,13 @@ namespace Wazzy.Async.Extensions;
 
 public static class CallerExtensions
 {
-    internal static AsyncState? GetAsyncState(this Caller caller, ref Func<int>? getter)
+    internal static AsyncState GetAsyncState(this Caller caller, ref Func<int>? getter)
     {
         if (getter == null)
         {
             getter = caller.GetFunction("asyncify_get_state")?.WrapFunc<int>();
             if (getter == null)
-                return default;
+                throw new InvalidOperationException("Cannot `GetAsyncState()` - instance is not async capable");
         }
 
         return (AsyncState)getter();
@@ -21,7 +21,7 @@ public static class CallerExtensions
     /// </summary>
     /// <param name="caller"></param>
     /// <returns></returns>
-    public static AsyncState? GetAsyncState(this Caller caller)
+    public static AsyncState GetAsyncState(this Caller caller)
     {
         Func<int>? getter = null;
         return GetAsyncState(caller, ref getter);
@@ -34,7 +34,11 @@ public static class CallerExtensions
     /// <returns></returns>
     public static bool IsAsyncCapable(this Caller caller)
     {
-        return caller.GetFunction("asyncify_start_unwind") != null;
+        return caller.GetFunction("asyncify_start_unwind") != null
+            && caller.GetFunction("asyncify_stop_unwind") != null
+            && caller.GetFunction("asyncify_start_rewind") != null
+            && caller.GetFunction("asyncify_stop_rewind") != null
+            && caller.GetFunction("asyncify_get_state") != null;
     }
 
     internal static Memory GetDefaultMemory(this Caller caller)

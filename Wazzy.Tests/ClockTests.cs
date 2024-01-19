@@ -1,4 +1,6 @@
 using Wasmtime;
+using Wazzy.Async.Extensions;
+using Wazzy.Async;
 using Wazzy.WasiSnapshotPreview1;
 using Wazzy.WasiSnapshotPreview1.Clock;
 

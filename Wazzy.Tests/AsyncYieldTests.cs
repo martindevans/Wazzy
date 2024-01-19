@@ -18,7 +18,7 @@ public sealed class AsyncYieldTests
         _helper.Linker.DefineFunction("spectest", "print", (Caller call, int arg) =>
         {
             // Get or restore locals
-            (byte, long now) locals = call.GetSuspendedLocals<(byte, long)>()
+            (byte, long now) locals = call.GetSuspendedLocals<(byte, long)?>()
                                    ?? (0, DateTime.UtcNow.Ticks);
 
             // Do some setup stuff. This happens on every pass!
@@ -70,6 +70,22 @@ public sealed class AsyncYieldTests
     public void Dispose()
     {
         _helper.Dispose();
+    }
+
+    [TestMethod]
+    public void IsAsyncCapable()
+    {
+        var instance = _helper.Instantiate();
+
+        Assert.IsTrue(instance.IsAsyncCapable());
+    }
+
+    [TestMethod]
+    public void BasicState()
+    {
+        var instance = _helper.Instantiate();
+
+        Assert.AreEqual(AsyncState.None, instance.GetAsyncState());
     }
 
     [TestMethod]
