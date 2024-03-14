@@ -4,6 +4,6 @@
   &lt;Project Location="C:\Users\Martin\Documents\dotnet\Wazzy\Wazzy.Tests" Presentation="&amp;lt;Wazzy.Tests&amp;gt;" /&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=d5e765bd_002D496f_002D4036_002D80ed_002Dd8be858c1920/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Simple" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=d5e765bd_002D496f_002D4036_002D80ed_002Dd8be858c1920/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Simple" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;Project Location="C:\Users\Martin\Documents\dotnet\Wazzy\Wazzy.Tests" Presentation="&amp;lt;Wazzy.Tests&amp;gt;" /&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

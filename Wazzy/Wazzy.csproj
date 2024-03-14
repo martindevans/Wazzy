@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Wazzy</Title>
-    <Version>0.0.26</Version>
+    <Version>0.0.27</Version>
     <Authors>Martin Evans</Authors>
     <Description>A pure C# implementation of WASI</Description>
     <PackageProjectUrl>https://github.com/martindevans/Wazzy</PackageProjectUrl>
@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Wasmtime" Version="16.0.0" />
+    <PackageReference Include="Wasmtime" Version="17.0.0" />
   </ItemGroup>
 
   <ItemGroup>
