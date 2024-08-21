@@ -6,6 +6,8 @@ using Wazzy.WasiSnapshotPreview1.Clock;
 using Wazzy.WasiSnapshotPreview1.Environment;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem;
+using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Builder;
+using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
 using Wazzy.WasiSnapshotPreview1.Process;
 using Wazzy.WasiSnapshotPreview1.Random;
 using Exception = System.Exception;
@@ -108,30 +110,28 @@ namespace Wazzy.Tests.wasi_testsuite
 
         private (VirtualFileSystem, StringBuilder, StringBuilder) SetupVfs()
         {
-            throw new NotImplementedException("setup VFS");
+            var vfs = new VirtualFileSystemBuilder();
 
-            //var vfs = new VirtualFileSystemBuilder();
-
-            //vfs.WithVirtualRoot(root =>
-            //{
-            //    foreach (var specDir in _spec.Dirs)
-            //    {
-            //        var path = Path.Combine(Path.GetDirectoryName(_wasm)!, specDir);
-            //        root.MapDirectory(specDir, path);
-            //        vfs.WithPreopen(specDir);
+            vfs.WithVirtualRoot(root =>
+            {
+                foreach (var specDir in _spec.Dirs)
+                {
+                    var path = Path.Combine(Path.GetDirectoryName(_wasm)!, specDir);
+                    root.MapDirectory(specDir, path);
+                    vfs.WithPreopen(specDir);
 
 
-            //        var cleanup = Directory.EnumerateFileSystemEntries(path, "*.cleanup", SearchOption.AllDirectories);
-            //        foreach (var item in cleanup)
-            //            new FileInfo(item).Delete();
-            //    }
-            //});
+                    var cleanup = Directory.EnumerateFileSystemEntries(path, "*.cleanup", SearchOption.AllDirectories);
+                    foreach (var item in cleanup)
+                        new FileInfo(item).Delete();
+                }
+            });
 
-            //var stdout = new StringBuilder();
-            //var stderr = new StringBuilder();
-            //vfs.WithPipes(new ZeroFile(), new StringBuilderLog(stdout), new StringBuilderLog(stderr));
+            var stdout = new StringBuilder();
+            var stderr = new StringBuilder();
+            vfs.WithPipes(new ZeroFile(), new StringBuilderLog(stdout), new StringBuilderLog(stderr));
 
-            //return (vfs.Build(), stdout, stderr);
+            return (vfs.Build(), stdout, stderr);
         }
 
         public void Dispose()

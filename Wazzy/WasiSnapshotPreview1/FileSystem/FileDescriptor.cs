@@ -6,15 +6,10 @@ namespace Wazzy.WasiSnapshotPreview1.FileSystem;
 /// A handle to an open file
 /// </summary>
 [StructLayout(LayoutKind.Explicit, Size = 4)]
-public readonly record struct FileDescriptor
+public readonly struct FileDescriptor(int handle)
 {
     [FieldOffset(0)]
-    public readonly int Handle;
-
-    public FileDescriptor(int handle)
-    {
-        Handle = handle;
-    }
+    public readonly int Handle = handle;
 
     public override string ToString()
     {

@@ -12,14 +12,8 @@ public enum PreopenType
 /// Information about a "preopened" item in the filesystem (e.g. file system roots)
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public readonly struct Prestat
+public readonly struct Prestat(PreopenType type, int nameLength)
 {
-    public readonly PreopenType Type;
-    public readonly int NameLength;
-
-    public Prestat(PreopenType type, int nameLength)
-    {
-        Type = type;
-        NameLength = nameLength;
-    }
+    public readonly PreopenType Type = type;
+    public readonly int NameLength = nameLength;
 }

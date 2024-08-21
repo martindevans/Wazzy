@@ -10,10 +10,10 @@ namespace Wazzy.WasiSnapshotPreview1.Environment;
 public class BasicEnvironment
     : IWasiEnvironment
 {
-    private readonly Dictionary<string, Memory<byte>> _envVars = new();
+    private readonly Dictionary<string, Memory<byte>> _envVars = [ ];
     private uint _envBytesCount;
 
-    private readonly List<Memory<byte>> _args = new();
+    private readonly List<Memory<byte>> _args = [ ];
     private uint _argsBytesCount;
 
     /// <summary>

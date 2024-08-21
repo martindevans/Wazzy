@@ -12,7 +12,7 @@ public interface IWasiEnvironment
     /// <summary>
     /// The module which the exports of this feature are defined in
     /// </summary>
-    public static readonly string Module = "wasi_snapshot_preview1";
+    public const string Module = "wasi_snapshot_preview1";
 
     /// <summary>
     /// Get the size of the environment variable data

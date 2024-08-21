@@ -40,11 +40,11 @@ namespace Wazzy.Tests.wasi_testsuite.tests.c
         //    Run("c/testsuite/fdopendir-with-access", false);
         //}
 
-        //[TestMethod]
-        //public void FOpenWithAccess()
-        //{
-        //    Run("c/testsuite/fopen-with-access", false);
-        //}
+        [TestMethod]
+        public void FOpenWithAccess()
+        {
+            Run("c/testsuite/fopen-with-access", false);
+        }
 
         // Note: VFS does not support file rights
         //[TestMethod]
@@ -53,23 +53,23 @@ namespace Wazzy.Tests.wasi_testsuite.tests.c
         //    Run("c/testsuite/fopendir-with-no-access", false);
         //}
 
-        //[TestMethod]
-        //public void LSeek()
-        //{
-        //    Run("c/testsuite/lseek", false);
-        //}
+        [TestMethod]
+        public void LSeek()
+        {
+            Run("c/testsuite/lseek", false);
+        }
 
-        //[TestMethod]
-        //public void PReadWithAccess()
-        //{
-        //    Run("c/testsuite/pread-with-access", false);
-        //}
+        [TestMethod]
+        public void PReadWithAccess()
+        {
+            Run("c/testsuite/pread-with-access", false);
+        }
 
-        //[TestMethod]
-        //public void PWriteWithAccess()
-        //{
-        //    Run("c/testsuite/pwrite-with-access", false);
-        //}
+        [TestMethod]
+        public void PWriteWithAccess()
+        {
+            Run("c/testsuite/pwrite-with-access", false);
+        }
 
         // Note: VFS does not support inodes (everything has inode == 0)
         //[TestMethod]

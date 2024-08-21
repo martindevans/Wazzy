@@ -26,17 +26,17 @@ namespace Wazzy.Tests.wasi_testsuite.tests.rust
             Run("rust/testsuite/clock_time_get");
         }
 
-        //[TestMethod]
-        //public void ClosePreopen()
-        //{
-        //    Run("rust/testsuite/close_preopen", false);
-        //}
+        [TestMethod]
+        public void ClosePreopen()
+        {
+            Run("rust/testsuite/close_preopen", false);
+        }
 
-        //[TestMethod]
-        //public void DanglingFd()
-        //{
-        //    Run("rust/testsuite/dangling_fd", false);
-        //}
+        [TestMethod]
+        public void DanglingFd()
+        {
+            Run("rust/testsuite/dangling_fd", false);
+        }
 
         // Note: symlinks are not supported by the VFS at the moment
         //[TestMethod]
@@ -52,23 +52,23 @@ namespace Wazzy.Tests.wasi_testsuite.tests.rust
         //    Run("rust/testsuite/directory_seek", false);
         //}
 
-        //[TestMethod]
-        //public void FdAdvise()
-        //{
-        //    Run("rust/testsuite/fd_advise", false);
-        //}
+        [TestMethod]
+        public void FdAdvise()
+        {
+            Run("rust/testsuite/fd_advise", false);
+        }
 
-        //[TestMethod]
-        //public void FdFilestatGet()
-        //{
-        //    Run("rust/testsuite/fd_filestat_get", false);
-        //}
+        [TestMethod]
+        public void FdFilestatGet()
+        {
+            Run("rust/testsuite/fd_filestat_get", false);
+        }
 
-        //[TestMethod]
-        //public void FdFlagsSet()
-        //{
-        //    Run("rust/testsuite/fd_flags_set", false);
-        //}
+        [TestMethod]
+        public void FdFlagsSet()
+        {
+            Run("rust/testsuite/fd_flags_set", false);
+        }
 
         // todo:failing due to missing two files in an empty directory: . and ..
         //[TestMethod]

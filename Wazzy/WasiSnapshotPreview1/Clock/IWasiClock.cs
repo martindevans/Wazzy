@@ -12,7 +12,7 @@ public interface IWasiClock
     /// <summary>
     /// The module which the exports of this feature are defined in
     /// </summary>
-    public static readonly string Module = "wasi_snapshot_preview1";
+    public const string Module = "wasi_snapshot_preview1";
 
     /// <summary>
     /// Return the time value of a clock

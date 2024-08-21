@@ -10,7 +10,7 @@ public interface IWasiSocket
     /// <summary>
     /// The module which the exports of this feature are defined in
     /// </summary>
-    public static readonly string Module = "wasi_snapshot_preview1";
+    public const string Module = "wasi_snapshot_preview1";
 
     /// <summary>
     /// Accept a new incoming connection.

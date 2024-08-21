@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using System.Text;
+﻿using System.Text;
 using Wasmtime;
 using Wazzy.Interop;
 
@@ -74,7 +73,7 @@ public abstract class WriteToOutputFilesystem
         return WasiError.EBADF;
     }
 
-    public WasiError PWrite(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nread)
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, ref uint nread)
     {
         return WasiError.EBADF;
     }

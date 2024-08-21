@@ -8,7 +8,7 @@ public interface IWasiExitProcess
     /// <summary>
     /// The module which the exports of this feature are defined in
     /// </summary>
-    public static readonly string Module = "wasi_snapshot_preview1";
+    public const string Module = "wasi_snapshot_preview1";
 
     /// <summary>
     /// Exit the process with the given return code

@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace Wazzy.Async;
+﻿namespace Wazzy.Async;
 
 public class BadExecutionStateException(int executionState, string name)
     : Exception($"Bad execution state in '{name}': {executionState}")

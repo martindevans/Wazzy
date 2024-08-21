@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic.FileIO;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem;
 
@@ -7,27 +6,15 @@ namespace Wazzy.WasiSnapshotPreview1.FileSystem;
 /// Information about an item in the filesystem
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public readonly struct FileStat
+public readonly struct FileStat(ulong dev, ulong inode, FileType type, ulong links, ulong size, ulong atime, ulong mtime, ulong ctime)
 {
-    public readonly ulong Device;
-    public readonly ulong Inode;
-    public readonly FileType FileType;
-    public readonly ulong LinkCount;
-    public readonly ulong Size;
+    public readonly ulong Device = dev;
+    public readonly ulong Inode = inode;
+    public readonly FileType FileType = type;
+    public readonly ulong LinkCount = links;
+    public readonly ulong Size = size;
 
-    public readonly ulong AccessTime;
-    public readonly ulong ModifyTime;
-    public readonly ulong ChangeTime;
-
-    public FileStat(ulong dev, ulong inode, FileType type, ulong links, ulong size, ulong atime, ulong mtime, ulong ctime)
-    {
-        Device = dev;
-        Inode = inode;
-        FileType = type;
-        LinkCount = links;
-        Size = size;
-        AccessTime = atime;
-        ModifyTime = mtime;
-        ChangeTime = ctime;
-    }
+    public readonly ulong AccessTime = atime;
+    public readonly ulong ModifyTime = mtime;
+    public readonly ulong ChangeTime = ctime;
 }

@@ -32,7 +32,7 @@ internal readonly struct AsyncMemoryState
         unsafe
         {
             var ptr = memory.GetPointer() + GetRewindStructAddress();
-            return ref *((AsyncStackStruct32*)ptr.ToPointer());
+            return ref *(AsyncStackStruct32*)ptr.ToPointer();
         }
     }
 
@@ -41,7 +41,7 @@ internal readonly struct AsyncMemoryState
         unsafe
         {
             var ptr = memory.GetPointer() + GetRewindStructAddress();
-            return ref *((AsyncStackStruct64*)ptr.ToPointer());
+            return ref *(AsyncStackStruct64*)ptr.ToPointer();
         }
     }
 

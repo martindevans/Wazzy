@@ -1,6 +1,3 @@
 ﻿namespace Wazzy.Async;
 
-public readonly struct Empty
-{
-    
-}
+public readonly struct Empty;

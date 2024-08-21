@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using Wasmtime;
+﻿using Wasmtime;
 using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem;
@@ -10,7 +9,7 @@ public interface IWasiFileSystem
     /// <summary>
     /// The module which the exports of this feature are defined in
     /// </summary>
-    public static readonly string Module = "wasi_snapshot_preview1";
+    public const string Module = "wasi_snapshot_preview1";
 
     /// <summary>
     /// Get the information associated with a pre-opened file descriptor. "Pre-opened" file descriptors are the roots of the file system and
@@ -54,7 +53,7 @@ public interface IWasiFileSystem
     /// <param name="caller">Context for this call</param>
     /// <param name="fd"></param>
     /// <returns></returns>
-    protected CloseResult Close(Caller caller, FileDescriptor fd);
+    protected internal CloseResult Close(Caller caller, FileDescriptor fd);
 
     /// <summary>
     /// Read list of items from a directory.
@@ -96,7 +95,7 @@ public interface IWasiFileSystem
     /// <param name="offset"></param>
     /// <param name="nwrittenOutput"></param>
     /// <returns></returns>
-    protected WasiError PWrite(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nwrittenOutput);
+    protected internal WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, ref uint nwrittenOutput);
 
     /// <summary>
     /// Get a "FileStat" object for the given file descriptor
@@ -105,7 +104,7 @@ public interface IWasiFileSystem
     /// <param name="fd"></param>
     /// <param name="result"></param>
     /// <returns></returns>
-    protected StatResult StatGet(Caller caller, FileDescriptor fd, ref FileStat result);
+    protected internal StatResult StatGet(Caller caller, FileDescriptor fd, ref FileStat result);
 
     /// <summary>
     /// Adjust the size of an open file. If this increases the file's size, the extra bytes are filled with zeros. Note: This is similar to ftruncate in POSIX.
@@ -172,7 +171,7 @@ public interface IWasiFileSystem
     /// <param name="whence"></param>
     /// <param name="newOffset"></param>
     /// <returns></returns>
-    protected SeekResult Seek(Caller caller, FileDescriptor fd, long offset, Whence whence, ref ulong newOffset);
+    protected internal SeekResult Seek(Caller caller, FileDescriptor fd, long offset, Whence whence, ref ulong newOffset);
 
     /// <summary>
     /// Get the current position in a file descriptor
@@ -478,7 +477,7 @@ public interface IWasiFileSystem
             (Caller c, int fd, int iovsAddr, int iovsCount, long offset, int nwrittenAddr) => (int)PWrite(
                 c,
                 new FileDescriptor(fd),
-                new Buffer<Buffer<byte>>(iovsAddr, (uint)iovsCount),
+                new ReadonlyBuffer<ReadonlyBuffer<byte>>(iovsAddr, (uint)iovsCount),
                 offset,
                 ref new Pointer<uint>(nwrittenAddr).Deref(c)
             )

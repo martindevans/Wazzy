@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Wasmtime;
+using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem;
 
 namespace Wazzy.WasiSnapshotPreview1.Clock;
 
@@ -7,8 +8,10 @@ namespace Wazzy.WasiSnapshotPreview1.Clock;
 /// A clock for WASI that ticks automatically as real time passes
 /// </summary>
 public class RealtimeClock
-    : IWasiClock
+    : IWasiClock, IVFSClock
 {
+    private readonly DateTimeOffset Epoch = DateTimeOffset.FromUnixTimeMilliseconds(0);
+
     private readonly Stopwatch _monotonic;
 
     /// <summary>
@@ -62,5 +65,24 @@ public class RealtimeClock
                 retValue = 0;
                 return WasiError.EINVAL;
         }
+    }
+
+    ulong IVFSClock.FromRealTime(DateTimeOffset time)
+    {
+        var now = time - Epoch;
+        var nanos = (ulong)now.Ticks * 100;
+        return nanos;
+    }
+
+    DateTimeOffset IVFSClock.ToRealTime(ulong time)
+    {
+        return Epoch + TimeSpan.FromTicks((long)time / 100);
+    }
+
+    ulong IVFSClock.GetTime()
+    {
+        var now = DateTimeOffset.UtcNow - Epoch;
+        var nanos = (ulong)now.Ticks * 100;
+        return nanos;
     }
 }

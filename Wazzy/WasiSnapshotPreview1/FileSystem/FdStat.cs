@@ -6,18 +6,10 @@ namespace Wazzy.WasiSnapshotPreview1.FileSystem;
 /// Information about an open file descriptor
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public readonly struct FdStat
+public readonly struct FdStat(FileType fileType, FdFlags flags, FileRights rightsBase = FileRights.All, FileRights rightsInheriting = FileRights.All)
 {
-    public readonly FileType FileType;
-    public readonly FdFlags Flags;
-    public readonly FileRights RightsBase;
-    public readonly FileRights RightsInheriting;
-
-    public FdStat(FileType fileType, FdFlags flags, FileRights rightsBase = FileRights.All, FileRights rightsInheriting = FileRights.All)
-    {
-        FileType = fileType;
-        Flags = flags;
-        RightsBase = rightsBase;
-        RightsInheriting = rightsInheriting;
-    }
+    public readonly FileType FileType = fileType;
+    public readonly FdFlags Flags = flags;
+    public readonly FileRights RightsBase = rightsBase;
+    public readonly FileRights RightsInheriting = rightsInheriting;
 }
