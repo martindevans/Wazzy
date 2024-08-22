@@ -90,7 +90,7 @@ public class VirtualFileSystemBuilder
         return this;
     }
 
-    public VirtualFileSystemBuilder WithClock(IVFSClock clock)
+    public VirtualFileSystemBuilder WithClock(IVFSClock? clock)
     {
         ThrowClosed();
         _clock = clock;

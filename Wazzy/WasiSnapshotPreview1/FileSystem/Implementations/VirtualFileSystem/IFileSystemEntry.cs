@@ -18,13 +18,16 @@ public interface IFilesystemEntry
 
     public WasiError SetTimes(ulong timestamp, long atime, long mtime, FstFlags fstFlags)
     {
+        if (fstFlags is { AdjustAccessTime: true, AdjustAccessTimeNow: true } or { AdjustModifyTime: true, AdjustModifyTimeNow: true })
+            return WasiError.EINVAL;
+
         if (fstFlags.AdjustAccessTime)
             AccessTime = unchecked((ulong)atime);
         if (fstFlags.AdjustAccessTimeNow)
             AccessTime = timestamp;
 
         if (fstFlags.AdjustModifyTime)
-            ModificationTime = unchecked((ulong)atime);
+            ModificationTime = unchecked((ulong)mtime);
         if (fstFlags.AdjustModifyTimeNow)
             ModificationTime = timestamp;
 

@@ -14,7 +14,7 @@ using Exception = System.Exception;
 
 namespace Wazzy.Tests.wasi_testsuite
 {
-    public class WasiTestSuiteRunner
+    public sealed class WasiTestSuiteRunner
         : IDisposable
     {
         private readonly bool _logOnlyFs;
@@ -175,14 +175,14 @@ namespace Wazzy.Tests.wasi_testsuite
         {
             [DataMember(Name = "args")] private string[]? _args;
             [DataMember(Name = "dirs")] private string[]? _dirs;
-            [DataMember(Name = "env")] private Dictionary<string, string>? _env = new();
-            [DataMember(Name = "exitcode")] public int _exitcode;
+            [DataMember(Name = "env")] private Dictionary<string, string>? _env = [ ];
+            [DataMember(Name = "exit_code")] public int _exitcode;
             [DataMember(Name = "stderr")] public string? _stderr;
             [DataMember(Name = "stdout")] public string? _stdout;
 
-            public string[] Args => _args ?? Array.Empty<string>();
-            public string[] Dirs => _dirs ?? Array.Empty<string>();
-            public Dictionary<string, string> Env => _env ?? new();
+            public string[] Args => _args ?? [ ];
+            public string[] Dirs => _dirs ?? [ ];
+            public Dictionary<string, string> Env => _env ?? [ ];
 
             public int ExitCode => _exitcode;
             public string StdErr => _stderr ?? "";

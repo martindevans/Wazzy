@@ -84,13 +84,20 @@ public class ConsoleLog
                 _builder.RemoveRange(0, count);
 
                 // Format message
-                var str = Encoding.UTF8.GetString(arr);
-                var msg = $"[{File._prefix}]: {str}";
+                var str = Encoding.UTF8.GetString(arr, 0, count).ReplaceLineEndings();
+                var msg = str;
+                if (!string.IsNullOrEmpty(File._prefix))
+                    msg = $"[{File._prefix}]: {str}";
 
-                if (File._error)
-                    Console.Error.WriteLine(msg);
-                else
-                    Console.WriteLine(msg);
+                var prevc = Console.ForegroundColor;
+                Console.ForegroundColor = File._color ?? prevc;
+                {
+                    if (File._error)
+                        Console.Error.Write(msg);
+                    else
+                        Console.Write(msg);
+                }
+                Console.ForegroundColor = prevc;
             }
             finally
             {
@@ -116,6 +123,7 @@ public class ConsoleLog
     }
 
     private readonly string _prefix;
+    private readonly ConsoleColor? _color;
     private readonly bool _error;
     private readonly int _maxBufferSize;
     private readonly bool _newlineFlush;
@@ -124,9 +132,10 @@ public class ConsoleLog
 
     public FileType FileType => FileType.CharacterDevice;
 
-    public ConsoleLog(string prefix, bool error = false, int maxBufferSize = 1024, bool newlineFlush = true)
+    public ConsoleLog(string prefix, ConsoleColor? color = null, bool error = false, int maxBufferSize = 1024, bool newlineFlush = true)
     {
         _prefix = prefix;
+        _color = color;
         _error = error;
         _maxBufferSize = maxBufferSize;
         _newlineFlush = newlineFlush;

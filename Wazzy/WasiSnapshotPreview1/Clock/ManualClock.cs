@@ -1,4 +1,5 @@
 ﻿using Wasmtime;
+using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem;
 
 namespace Wazzy.WasiSnapshotPreview1.Clock;
 
@@ -6,7 +7,7 @@ namespace Wazzy.WasiSnapshotPreview1.Clock;
 /// A clock for WASI that stays frozen in time unless explicity advanced in time
 /// </summary>
 public class ManualClock
-    : IWasiClock
+    : IWasiClock, IVFSClock
 {
     private readonly DateTime Epoch = DateTime.UnixEpoch;
 
@@ -86,5 +87,17 @@ public class ManualClock
                 retValue = 0;
                 return WasiError.EINVAL;
         }
+    }
+
+    DateTimeOffset IVFSClock.ToRealTime(ulong time)
+    {
+        return Epoch + TimeSpan.FromTicks((long)time / 100);
+    }
+
+    ulong IVFSClock.GetTime()
+    {
+        var now = Now - Epoch;
+        var nanos = (ulong)now.Ticks * 100;
+        return nanos;
     }
 }

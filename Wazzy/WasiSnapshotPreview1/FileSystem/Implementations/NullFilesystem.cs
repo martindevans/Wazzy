@@ -9,28 +9,29 @@ namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
 public class NullFilesystem
     : IWasiFileSystem
 {
-    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, ref uint nwrittenOutput)
+    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten)
     {
+        nwritten = 0;
+
         // Check if it's stdout or stderr
         if (fd.Handle != 1 && fd.Handle != 2)
             return WasiError.EBADF;
 
         // Extract the message
         var iovecs = iovs.GetSpan(caller);
-        var totalWritten = 0u;
         for (var i = 0; i < iovecs.Length; i++)
         {
             var span = iovecs[i].GetSpan(caller);
-            totalWritten += (uint)span.Length;
+            nwritten += (uint)span.Length;
         }
 
         // Done
-        nwrittenOutput = totalWritten;
         return WasiError.SUCCESS;
     }
 
-    public PrestatGetResult PrestatGet(Caller caller, FileDescriptor fd, ref Prestat result)
+    public PrestatGetResult PrestatGet(Caller caller, FileDescriptor fd, out Prestat result)
     {
+        result = default;
         return PrestatGetResult.BadFileDescriptor;
     }
 
@@ -39,8 +40,9 @@ public class NullFilesystem
         return PrestatDirNameResult.BadFileDescriptor;
     }
 
-    public PathOpenResult PathOpen(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, OpenFlags openFlags, FileRights baseRights, FileRights inheritingRights, FdFlags fdFlags, ref FileDescriptor outputFd)
+    public PathOpenResult PathOpen(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, OpenFlags openFlags, FileRights baseRights, FileRights inheritingRights, FdFlags fdFlags, out FileDescriptor outputFd)
     {
+        outputFd = default;
         return PathOpenResult.BadFileDescriptor;
     }
 
@@ -49,8 +51,9 @@ public class NullFilesystem
         return CloseResult.BadFileDescriptor;
     }
 
-    public ReadDirectoryResult ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> buffer, long cookie, ref uint bufUsedOutput)
+    public ReadDirectoryResult ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> buffer, long cookie, out uint bufUsed)
     {
+        bufUsed = 0;
         return ReadDirectoryResult.BadFileDescriptor;
     }
 
@@ -59,13 +62,15 @@ public class NullFilesystem
         return WasiError.EBADF;
     }
 
-    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, ref uint nread)
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nread)
     {
+        nread = 0;
         return WasiError.EBADF;
     }
 
-    public StatResult StatGet(Caller caller, FileDescriptor fd, ref FileStat result)
+    public StatResult StatGet(Caller caller, FileDescriptor fd, out FileStat result)
     {
+        result = default;
         return StatResult.BadFileDescriptor;
     }
 
@@ -84,18 +89,21 @@ public class NullFilesystem
         return WasiError.EBADF;
     }
 
-    public StatResult PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, ref FileStat result)
+    public StatResult PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, out FileStat result)
     {
+        result = default;
         return StatResult.BadFileDescriptor;
     }
 
-    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, ref uint nread)
+    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread)
     {
+        nread = 0;
         return ReadResult.BadFileDescriptor;
     }
 
-    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nread)
+    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread)
     {
+        nread = 0;
         return ReadResult.BadFileDescriptor;
     }
 
@@ -134,8 +142,9 @@ public class NullFilesystem
         return WasiError.EBADF;
     }
 
-    public WasiError FdStatGet(Caller caller, FileDescriptor fd, ref FdStat pointer)
+    public WasiError FdStatGet(Caller caller, FileDescriptor fd, out FdStat stat)
     {
+        stat = default;
         return WasiError.EBADF;
     }
 

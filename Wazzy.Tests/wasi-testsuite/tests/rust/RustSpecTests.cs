@@ -7,8 +7,8 @@ namespace Wazzy.Tests.wasi_testsuite.tests.rust
         {
             using var runner = new WasiTestSuiteRunner(path, logsOnlyFs);
 
-            // Remove this once fd_allocate is supported. Probably never, since it seems to have been removed in
-            // future versions of WASI.
+            // Remove this once fd_allocate is supported. Probably never, since
+            // it seems to have been removed in future versions of WASI.
             runner.ExtraEnv.Add("NO_FD_ALLOCATE", "1");
 
             runner.Run();
@@ -62,6 +62,12 @@ namespace Wazzy.Tests.wasi_testsuite.tests.rust
         public void FdFilestatGet()
         {
             Run("rust/testsuite/fd_filestat_get", false);
+        }
+
+        [TestMethod]
+        public void FdFilestatSet()
+        {
+            Run("rust/testsuite/fd_filestat_set", false);
         }
 
         [TestMethod]

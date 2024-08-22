@@ -58,6 +58,12 @@ namespace Wazzy.Tests.wasi_testsuite.tests.assemblyscript
         }
 
         [TestMethod]
+        public void ProcExitFailure()
+        {
+            Run("assemblyscript/testsuite/proc_exit-failure");
+        }
+
+        [TestMethod]
         public void ProcExitSuccess()
         {
             Run("assemblyscript/testsuite/proc_exit-success");

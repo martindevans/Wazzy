@@ -84,6 +84,20 @@ public sealed class VirtualFileSystem
         return null;
     }
 
+    private int WithHandle(Caller caller, FileDescriptor fd, WithFileHandleDelegate handleAct)
+    {
+        lock (_globalLock)
+        {
+            var handle = GetHandle(fd);
+            if (handle == null)
+                return (int)WasiError.EBADF;
+
+            return handleAct(caller, handle);
+        }
+    }
+
+    private delegate int WithFileHandleDelegate(Caller caller, IFilesystemHandle handle);
+
     private IFilesystemHandle? GetHandle(FileDescriptor fd)
     {
         _handles.TryGetValue(fd, out var handle);
@@ -246,10 +260,12 @@ public sealed class VirtualFileSystem
         return null;
     }
 
-    PrestatGetResult IWasiFileSystem.PrestatGet(Caller caller, FileDescriptor fd, ref Prestat result)
+    PrestatGetResult IWasiFileSystem.PrestatGet(Caller caller, FileDescriptor fd, out Prestat result)
     {
         lock (_globalLock)
         {
+            result = default;
+
             // First 3 handles are stdin,out,err. 
             if (fd.Handle <= 2)
                 return PrestatGetResult.BadFileDescriptor;
@@ -286,24 +302,6 @@ public sealed class VirtualFileSystem
         }
     }
 
-    WasiError IWasiFileSystem.ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, ref int nwritten)
-    {
-        lock (_globalLock)
-        {
-            // Symbolic links are not supported, so therefore this one doesn't exist!
-            return WasiError.ENOENT;
-        }
-    }
-
-    WasiError IWasiFileSystem.PathSymLink(Caller caller, ReadOnlySpan<byte> oldPath, FileDescriptor fileDescriptor, ReadOnlySpan<byte> newPath)
-    {
-        lock (_globalLock)
-        {
-            // Symbolic links are not supported
-            return WasiError.ENOTSUP;
-        }
-    }
-
     public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to)
     {
         return WasiError.ENOTSUP;
@@ -318,12 +316,12 @@ public sealed class VirtualFileSystem
         FileRights _,
         FileRights __,
         FdFlags fdFlags,
-        ref FileDescriptor outputFd
+        out FileDescriptor outputFd
     )
     {
         lock (_globalLock)
         {
-            return PathOpen(caller, fd, lookup, path, openFlags, fdFlags, ref outputFd);
+            return PathOpen(caller, fd, lookup, path, openFlags, fdFlags, out outputFd);
         }
     }
 
@@ -334,9 +332,11 @@ public sealed class VirtualFileSystem
         ReadOnlySpan<byte> path,
         OpenFlags openFlags,
         FdFlags fdFlags,
-        ref FileDescriptor outputFd
+        out FileDescriptor outputFd
     )
     {
+        outputFd = default;
+
         // Handles are effectively 31 bits, so the sign bit must be unset
         if (fd.Handle < 0)
             return PathOpenResult.BadFileDescriptor;
@@ -372,7 +372,7 @@ public sealed class VirtualFileSystem
         if (dest == null)
         {
             if ((openFlags & OpenFlags.Create) == OpenFlags.Create)
-                return PathOpenCreate(caller, directory, path8, openFlags, fdFlags, ref outputFd);
+                return PathOpenCreate(caller, directory, path8, openFlags, fdFlags, out outputFd);
 
             return PathOpenResult.NoEntity;
         }
@@ -422,8 +422,10 @@ public sealed class VirtualFileSystem
         return PathOpenResult.BadFileDescriptor;
     }
 
-    private PathOpenResult PathOpenCreate(Caller caller, IDirectoryHandle root, PathUtf8 path, OpenFlags openFlags, FdFlags fdFlags, ref FileDescriptor outputFd)
+    private PathOpenResult PathOpenCreate(Caller caller, IDirectoryHandle root, PathUtf8 path, OpenFlags openFlags, FdFlags fdFlags, out FileDescriptor outputFd)
     {
+        outputFd = default;
+
         if (_readonly)
             return PathOpenResult.ReadOnly;
 
@@ -501,10 +503,12 @@ public sealed class VirtualFileSystem
         }
     }
 
-    ReadDirectoryResult IWasiFileSystem.ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> outputBuffer, long cookie, ref uint bufUsedOutput)
+    ReadDirectoryResult IWasiFileSystem.ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> outputBuffer, long cookie, out uint bufUsed)
     {
         lock (_globalLock)
         {
+            bufUsed = 0;
+
             var handle = GetHandle(fd);
             if (handle == null)
                 return ReadDirectoryResult.BadFileDescriptor;
@@ -518,18 +522,14 @@ public sealed class VirtualFileSystem
             // If the cookie points past the end of the list of items then early exit and indicate success (all items have been enumerated)
             var items = directory.EnumerateChildren(GetTimestamp());
             if (cookie >= items.Count)
-            {
-                bufUsedOutput = 0;
                 return ReadDirectoryResult.Success;
-            }
 
             // Enumerate all items past the cookie and write them to the buffer
-            var totalWritten = 0u;
             for (var i = (uint)cookie; i < items.Count; i++)
             {
                 // Write this item to the buffer and note if the end of the buffer was reached
                 var endOfBuffer = TryWrite(items[(int)i], i, outputBuffer, out var written);
-                totalWritten += written;
+                bufUsed += written;
 
                 // If the end was reached we can't write any more
                 if (endOfBuffer)
@@ -539,7 +539,6 @@ public sealed class VirtualFileSystem
                 outputBuffer = outputBuffer[written..];
             }
 
-            bufUsedOutput = totalWritten;
             return ReadDirectoryResult.Success;
 
             static bool TryWrite(DirectoryItem item, uint index, Span<byte> dest, out ushort writtenBytes)
@@ -575,14 +574,6 @@ public sealed class VirtualFileSystem
         }
     }
 
-    WasiError IWasiFileSystem.PathLink(Caller caller, FileDescriptor sourceRootFd, ReadOnlySpan<byte> sourcePath, int lookupFlags, FileDescriptor destRootFd, ReadOnlySpan<byte> destPath)
-    {
-        lock (_globalLock)
-        {
-            return WasiError.ENOTSUP;
-        }
-    }
-
     WasiError IWasiFileSystem.PathCreateDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {
         lock (_globalLock)
@@ -609,43 +600,26 @@ public sealed class VirtualFileSystem
         }
     }
 
-    WasiError IWasiFileSystem.Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, ref uint nwrittenOutput)
+    private WasiError FileWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten, long seek, Whence whence, bool restorePosition)
     {
         lock (_globalLock)
         {
             var handle = GetHandle(fd);
             if (handle == null)
-                return WasiError.EBADF;
-
-            if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
-                return WasiError.EISDIR;
-
-            if (!fileHandle.File.IsWritable)
             {
-                nwrittenOutput = 0;
-                return WasiError.SUCCESS;
+                nwritten = 0;
+                return WasiError.EBADF;
             }
 
-            nwrittenOutput = fileHandle.Write(caller, iovs, GetTimestamp());
-
-            return WasiError.SUCCESS;
-        }
-    }
-
-    WasiError IWasiFileSystem.PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, ref uint nwrittenOutput)
-    {
-        lock (_globalLock)
-        {
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return WasiError.EBADF;
-
             if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
+            {
+                nwritten = 0;
                 return WasiError.EISDIR;
+            }
 
             if (!fileHandle.File.IsWritable)
             {
-                nwrittenOutput = 0;
+                nwritten = 0;
                 return WasiError.SUCCESS;
             }
 
@@ -653,32 +627,32 @@ public sealed class VirtualFileSystem
             var saveOffset = fileHandle.Position;
 
             // Seek to the offset
-            var seekResult = fileHandle.Seek(offset, Whence.Set, out _);
+            var seekResult = fileHandle.Seek(seek, whence, out _);
             if (seekResult != SeekResult.Success)
+            {
+                nwritten = 0;
                 return (WasiError)seekResult;
+            }
 
             // Write the data
-            nwrittenOutput = fileHandle.Write(caller, iovs, GetTimestamp());
+            nwritten = fileHandle.Write(caller, iovs, GetTimestamp());
 
             // Return to the saved offset
-            fileHandle.Seek((long)saveOffset, Whence.Set, out _);
+            if (restorePosition)
+                fileHandle.Seek((long)saveOffset, Whence.Set, out _);
 
             return WasiError.SUCCESS;
         }
     }
 
-    WasiError IWasiFileSystem.FdAdvise(Caller caller, FileDescriptor fd, long offset, long filesize, Advice advice)
+    WasiError IWasiFileSystem.Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten)
     {
-        lock (_globalLock)
-        {
-            // Check that the handle exists
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return WasiError.EBADF;
+        return FileWrite(caller, fd, iovs, out nwritten, 0, Whence.Current, false);
+    }
 
-            // We don't actually do anything with the advice! Just return immediately.
-            return WasiError.SUCCESS;
-        }
+    WasiError IWasiFileSystem.PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nwritten)
+    {
+        return FileWrite(caller, fd, iovs, out nwritten, offset, Whence.Set, true);
     }
 
     WasiError IWasiFileSystem.FdAllocate(Caller caller, FileDescriptor fd, long offset, long length)
@@ -714,16 +688,18 @@ public sealed class VirtualFileSystem
         }
     }
 
-    WasiError IWasiFileSystem.FdStatGet(Caller caller, FileDescriptor fd, ref FdStat statPtr)
+    WasiError IWasiFileSystem.FdStatGet(Caller caller, FileDescriptor fd, out FdStat statPtr)
     {
         lock (_globalLock)
         {
             var handle = GetHandle(fd);
             if (handle == null)
+            {
+                statPtr = default;
                 return WasiError.EBADF;
+            }
 
             statPtr = handle.GetStat();
-
             return WasiError.SUCCESS;
         }
     }
@@ -770,31 +746,36 @@ public sealed class VirtualFileSystem
         }
     }
 
-    StatResult IWasiFileSystem.StatGet(Caller caller, FileDescriptor fd, ref FileStat result)
+    StatResult IWasiFileSystem.StatGet(Caller caller, FileDescriptor fd, out FileStat result)
     {
         lock (_globalLock)
         {
             var handle = GetHandle(fd);
             if (handle == null)
+            {
+                result = default;
                 return StatResult.BadFileDescriptor;
+            }
 
             result = handle.GetFileStat();
             return StatResult.Success;
         }
     }
 
-    StatResult IWasiFileSystem.PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, ref FileStat result)
+    StatResult IWasiFileSystem.PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, out FileStat result)
     {
         lock (_globalLock)
         {
-            FileDescriptor tmpFd = default;
-            var openResult = PathOpen(caller, fd, lookup, path, OpenFlags.None, FdFlags.None, ref tmpFd);
+            var openResult = PathOpen(caller, fd, lookup, path, OpenFlags.None, FdFlags.None, out var tmpFd);
             if (openResult != PathOpenResult.Success)
+            {
+                result = default;
                 return (StatResult)openResult;
+            }
 
             try
             {
-                return ((IWasiFileSystem)this).StatGet(caller, tmpFd, ref result);
+                return ((IWasiFileSystem)this).StatGet(caller, tmpFd, out result);
             }
             finally
             {
@@ -803,10 +784,12 @@ public sealed class VirtualFileSystem
         }
     }
 
-    ReadResult IWasiFileSystem.Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, ref uint nreadPtr)
+    ReadResult IWasiFileSystem.Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread)
     {
         lock (_globalLock)
         {
+            nread = 0u;
+
             var handle = GetHandle(fd);
             if (handle == null)
                 return ReadResult.BadFileDescriptor;
@@ -815,13 +798,9 @@ public sealed class VirtualFileSystem
                 return ReadResult.IsDirectory;
 
             if (!fileHandle.File.IsReadable)
-            {
-                nreadPtr = 0;
                 return ReadResult.Success;
-            }
 
             var iovsSpan = iovs.GetSpan(caller);
-            var nread = 0u;
             for (var i = 0; i < iovs.Length; i++)
             {
                 var span = iovsSpan[i].GetSpan(caller);
@@ -832,15 +811,16 @@ public sealed class VirtualFileSystem
                     break;
             }
 
-            nreadPtr = nread;
             return ReadResult.Success;
         }
     }
 
-    ReadResult IWasiFileSystem.PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nreadPtr)
+    ReadResult IWasiFileSystem.PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread)
     {
         lock (_globalLock)
         {
+            nread = 0;
+
             var handle = GetHandle(fd);
             if (handle == null)
                 return ReadResult.BadFileDescriptor;
@@ -849,10 +829,7 @@ public sealed class VirtualFileSystem
                 return ReadResult.IsDirectory;
 
             if (!fileHandle.File.IsReadable)
-            {
-                nreadPtr = 0;
                 return ReadResult.Success;
-            }
 
             // Save the current file offset
             fileHandle.Seek(0, Whence.Current, out var saveOffset);
@@ -861,7 +838,6 @@ public sealed class VirtualFileSystem
             fileHandle.Seek(offset, Whence.Set, out _);
 
             var iovsSpan = iovs.GetSpan(caller);
-            var nread = 0u;
             for (var i = 0; i < iovs.Length; i++)
             {
                 var span = iovsSpan[i].GetSpan(caller);
@@ -875,7 +851,6 @@ public sealed class VirtualFileSystem
             // Return to the saved offset
             fileHandle.Seek((long)saveOffset, Whence.Set, out _);
 
-            nreadPtr = nread;
             return ReadResult.Success;
         }
     }
@@ -897,12 +872,8 @@ public sealed class VirtualFileSystem
 
     SyncResult IWasiFileSystem.Sync(Caller caller, FileDescriptor fd)
     {
-        lock (_globalLock)
+        return (SyncResult)WithHandle(caller, fd, static (_, handle) =>
         {
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return SyncResult.BadFileDescriptor;
-
             try
             {
                 if (handle is IFileHandle file)
@@ -910,11 +881,11 @@ public sealed class VirtualFileSystem
             }
             catch
             {
-                return SyncResult.IoError;
+                return (int)SyncResult.IoError;
             }
 
-            return SyncResult.Success;
-        }
+            return (int)SyncResult.Success;
+        });
     }
 
     WasiError IWasiFileSystem.PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)

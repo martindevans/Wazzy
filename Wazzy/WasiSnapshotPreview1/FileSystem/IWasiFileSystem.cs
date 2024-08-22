@@ -21,7 +21,7 @@ public interface IWasiFileSystem
     /// <param name="fd">File descriptor being probed.</param>
     /// <param name="result">Output information about this file descriptor.</param>
     /// <returns>Ok if the file descriptor is a known pre-opened fd, or else BadFileDescriptor</returns>
-    protected PrestatGetResult PrestatGet(Caller caller, FileDescriptor fd, ref Prestat result);
+    protected PrestatGetResult PrestatGet(Caller caller, FileDescriptor fd, out Prestat result);
 
     /// <summary>
     /// Get the name of a preopened file descriptor.
@@ -45,7 +45,7 @@ public interface IWasiFileSystem
     /// <param name="fdFlags">Controls what flags to set on the new file descriptor</param>
     /// <param name="outputFd">The output file descriptor</param>
     /// <returns></returns>
-    protected PathOpenResult PathOpen(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, OpenFlags openFlags, FileRights baseRights, FileRights inheritingRights, FdFlags fdFlags, ref FileDescriptor outputFd);
+    protected PathOpenResult PathOpen(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, OpenFlags openFlags, FileRights baseRights, FileRights inheritingRights, FdFlags fdFlags, out FileDescriptor outputFd);
 
     /// <summary>
     /// Close the given file descriptor (clean up all resources associated with it)
@@ -63,9 +63,9 @@ public interface IWasiFileSystem
     /// <param name="buffer">Output for resilts written as a sequence of `DirEnt` objects each followed by `DirEnt.NameLength` bytes
     /// holding the name. If there is insufficient space truncate the last entry</param>
     /// <param name="cookie">Indicates which directory entry to start with. Each `DirEnt` specifies the `cookie` of the next `DirEnt` in the sequence</param>
-    /// <param name="bufUsedOutput">The number of bytes used in `buffer`, if less than the size of the buffer that indicates that the end of the directory has been read</param>
+    /// <param name="bufUsed">The number of bytes used in `buffer`, if less than the size of the buffer that indicates that the end of the directory has been read</param>
     /// <returns></returns>
-    protected ReadDirectoryResult ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> buffer, long cookie, ref uint bufUsedOutput);
+    protected ReadDirectoryResult ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> buffer, long cookie, out uint bufUsed);
 
     /// <summary>
     /// Create a directory at the given path, relative to the given fd
@@ -77,14 +77,14 @@ public interface IWasiFileSystem
     protected WasiError PathCreateDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
 
     /// <summary>
-    /// Write to a given file descriptor
+    /// Write to a given file descriptor at the current offset
     /// </summary>
     /// <param name="caller">Context for this call</param>
     /// <param name="fd">File descriptor to write to</param>
     /// <param name="iovs">set of buffers to write</param>
-    /// <param name="nwrittenOutput">total number of bytes written</param>
+    /// <param name="nwritten">total number of bytes written</param>
     /// <returns></returns>
-    protected WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, ref uint nwrittenOutput);
+    protected WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten);
 
     /// <summary>
     /// Write to a given file descriptor without updating the offset
@@ -95,7 +95,7 @@ public interface IWasiFileSystem
     /// <param name="offset"></param>
     /// <param name="nwrittenOutput"></param>
     /// <returns></returns>
-    protected internal WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, ref uint nwrittenOutput);
+    protected internal WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nwrittenOutput);
 
     /// <summary>
     /// Get a "FileStat" object for the given file descriptor
@@ -104,7 +104,7 @@ public interface IWasiFileSystem
     /// <param name="fd"></param>
     /// <param name="result"></param>
     /// <returns></returns>
-    protected internal StatResult StatGet(Caller caller, FileDescriptor fd, ref FileStat result);
+    protected internal StatResult StatGet(Caller caller, FileDescriptor fd, out FileStat result);
 
     /// <summary>
     /// Adjust the size of an open file. If this increases the file's size, the extra bytes are filled with zeros. Note: This is similar to ftruncate in POSIX.
@@ -139,7 +139,7 @@ public interface IWasiFileSystem
     /// <param name="result"></param>
     /// <param name="lookup"></param>
     /// <returns></returns>
-    protected StatResult PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, ref FileStat result);
+    protected StatResult PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, out FileStat result);
 
     /// <summary>
     /// Read bytes from a file descriptor into a set of buffers
@@ -149,7 +149,7 @@ public interface IWasiFileSystem
     /// <param name="iovs">Buffer of buffers to read data into sequentially</param>
     /// <param name="nread">Output for the total number of bytes read</param>
     /// <returns></returns>
-    protected ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, ref uint nread);
+    protected ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread);
 
     /// <summary>
     /// Read bytes from a file descriptor into a set of buffers, without using or updating the file offset
@@ -160,7 +160,7 @@ public interface IWasiFileSystem
     /// <param name="offset">Offset into the file</param>
     /// <param name="nread">Output for the total number of bytes read</param>
     /// <returns></returns>
-    protected ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, ref uint nread);
+    protected ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread);
 
     /// <summary>
     /// Seek position to a new offset
@@ -230,6 +230,11 @@ public interface IWasiFileSystem
     /// <returns></returns>
     protected WasiError FdAdvise(Caller caller, FileDescriptor fd, long offset, long filesize, Advice advice)
     {
+        // First check the file actually exists by using filestat
+        var statResult = StatGet(caller, fd, out _);
+        if (statResult != StatResult.Success)
+            return (WasiError)statResult;
+
         // Advice isn't important (whatever the advice, the result will ultimately be the same). Implement it
         // to just return success by default.
         return WasiError.SUCCESS;
@@ -245,15 +250,28 @@ public interface IWasiFileSystem
     /// <returns></returns>
     protected WasiError FdAllocate(Caller caller, FileDescriptor fd, long offset, long length);
 
-    protected WasiError FdStatGet(Caller caller, FileDescriptor fd, ref FdStat pointer);
+    protected WasiError FdStatGet(Caller caller, FileDescriptor fd, out FdStat output);
 
     protected WasiError FdStatSetFlags(Caller caller, FileDescriptor fd, FdFlags flags);
 
-    protected WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, ref int nwritten);
+    protected WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
+    {
+        // Assume links are not supported, so therefore one doesn't exist
+        nwritten = 0;
+        return WasiError.ENOENT;
+    }
 
-    protected WasiError PathLink(Caller caller, FileDescriptor sourceRootFd, ReadOnlySpan<byte> sourcePath, int lookupFlags, FileDescriptor destRootFd, ReadOnlySpan<byte> destPath);
+    protected WasiError PathLink(Caller caller, FileDescriptor sourceRootFd, ReadOnlySpan<byte> sourcePath, int lookupFlags, FileDescriptor destRootFd, ReadOnlySpan<byte> destPath)
+    {
+        // Assume hard links are not supported, so therefore one can't be created
+        return WasiError.ENOTSUP;
+    }
 
-    protected WasiError PathSymLink(Caller caller, ReadOnlySpan<byte> oldPath, FileDescriptor fileDescriptor, ReadOnlySpan<byte> newPath);
+    protected WasiError PathSymLink(Caller caller, ReadOnlySpan<byte> oldPath, FileDescriptor fileDescriptor, ReadOnlySpan<byte> newPath)
+    {
+        // Assume links are not supported, so therefore one can't be created
+        return WasiError.ENOTSUP;
+    }
 
     protected WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to);
 
@@ -279,7 +297,7 @@ public interface IWasiFileSystem
                 (Caller c, int fd, int ptr) => (int)PrestatGet(
                     c,
                     new FileDescriptor(fd),
-                    ref new Pointer<Prestat>(ptr).Deref(c)
+                    out new Pointer<Prestat>(ptr).Deref(c)
                 )
             );
 
@@ -295,7 +313,7 @@ public interface IWasiFileSystem
             (Caller c, int fd, int resultAddr) => (int)StatGet(
                 c,
                 new FileDescriptor(fd),
-                ref new Pointer<FileStat>(resultAddr).Deref(c)
+                out new Pointer<FileStat>(resultAddr).Deref(c)
             )
         );
 
@@ -335,7 +353,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 (LookupFlags)lookupFlags,
                 new ReadonlyBuffer<byte>(pathAddr, (uint)pathLen).GetSpan(c),
-                ref new Pointer<FileStat>(resultAddr).Deref(c)
+                out new Pointer<FileStat>(resultAddr).Deref(c)
             )
         );
 
@@ -343,7 +361,7 @@ public interface IWasiFileSystem
             (Caller c, int fd, int resultAddr) => (int)FdStatGet(
                 c,
                 new FileDescriptor(fd),
-                ref new Pointer<FdStat>(resultAddr).Deref(c)
+                out new Pointer<FdStat>(resultAddr).Deref(c)
             )
         );
 
@@ -360,7 +378,7 @@ public interface IWasiFileSystem
                 c,
                 new FileDescriptor(fd),
                 new Buffer<Buffer<byte>>(iovsAddr, (uint)iovsCount),
-                ref new Pointer<uint>(nreadAddr).Deref(c)
+                out new Pointer<uint>(nreadAddr).Deref(c)
             )
         );
 
@@ -370,7 +388,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 new Buffer<Buffer<byte>>(iovsAddr, (uint)iovsCount),
                 offset,
-                ref new Pointer<uint>(nreadAddr).Deref(c)
+                out new Pointer<uint>(nreadAddr).Deref(c)
             )
         );
 
@@ -402,7 +420,7 @@ public interface IWasiFileSystem
                 (FileRights)fsRightsBase,
                 (FileRights)fsRightsInheriting,
                 (FdFlags)fdFlagsInt,
-                ref new Pointer<FileDescriptor>(fdPtr).Deref(c)
+                out new Pointer<FileDescriptor>(fdPtr).Deref(c)
             )
         );
 
@@ -452,7 +470,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 new Buffer<byte>(dirEntPtr, (uint)bufferLen).GetSpan(c),
                 cookie,
-                ref new Pointer<uint>(bufUsedPtr).Deref(c)
+                out new Pointer<uint>(bufUsedPtr).Deref(c)
             )
         );
 
@@ -469,7 +487,7 @@ public interface IWasiFileSystem
                 c,
                 new FileDescriptor(fd),
                 new ReadonlyBuffer<ReadonlyBuffer<byte>>(iovsAddr, (uint)iovsCount),
-                ref new Pointer<uint>(nwrittenAddr).Deref(c)
+                out new Pointer<uint>(nwrittenAddr).Deref(c)
             )
         );
 
@@ -479,7 +497,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 new ReadonlyBuffer<ReadonlyBuffer<byte>>(iovsAddr, (uint)iovsCount),
                 offset,
-                ref new Pointer<uint>(nwrittenAddr).Deref(c)
+                out new Pointer<uint>(nwrittenAddr).Deref(c)
             )
         );
 
@@ -515,7 +533,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 new ReadonlyBuffer<byte>(pathPtr, (uint)pathLen).GetSpan(c),
                 new Buffer<byte>(outputPtr, (uint)outputLen).GetSpan(c),
-                ref new Pointer<int>(nwrittenPtr).Deref(c)
+                out new Pointer<int>(nwrittenPtr).Deref(c)
             )
         );
 
