@@ -74,6 +74,7 @@ public static class WasmAsyncExtensions
     /// <param name="caller"></param>
     /// <returns></returns>
     public static T? GetSuspendedLocals<T>(this Caller caller)
+        where T : struct
     {
         // If we're not rewinding then there's nothing to restore.
         if (caller.GetAsyncState() != AsyncState.Resuming)

@@ -44,7 +44,11 @@ internal class VirtualDirectoryContent
     public VirtualDirectoryContent(IVFSClock clock)
     {
         _clock = clock;
-        AccessTime = ModificationTime = ChangeTime = clock.GetTime();
+
+        var time = clock.GetTime();
+        AccessTime = time;
+        ModificationTime = time;
+        ChangeTime = time;
     }
 
     public bool Add(ReadOnlySpan<byte> name, IFilesystemEntry child)

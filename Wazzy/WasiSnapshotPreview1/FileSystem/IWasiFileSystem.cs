@@ -21,7 +21,7 @@ public interface IWasiFileSystem
     /// <param name="fd">File descriptor being probed.</param>
     /// <param name="result">Output information about this file descriptor.</param>
     /// <returns>Ok if the file descriptor is a known pre-opened fd, or else BadFileDescriptor</returns>
-    protected PrestatGetResult PrestatGet(Caller caller, FileDescriptor fd, out Prestat result);
+    public PrestatGetResult PrestatGet(Caller caller, FileDescriptor fd, out Prestat result);
 
     /// <summary>
     /// Get the name of a preopened file descriptor.
@@ -30,7 +30,7 @@ public interface IWasiFileSystem
     /// <param name="fd">File descriptor being queried</param>
     /// <param name="name">Output buffer for name, encoded as UTF8. Should be exactly the right size, return `WrongBufferSize` if not</param>
     /// <returns></returns>
-    protected PrestatDirNameResult PrestatDirName(Caller caller, FileDescriptor fd, Span<byte> name);
+    public PrestatDirNameResult PrestatDirName(Caller caller, FileDescriptor fd, Span<byte> name);
 
     /// <summary>
     /// Open a path relative to a file descriptor.
@@ -45,7 +45,7 @@ public interface IWasiFileSystem
     /// <param name="fdFlags">Controls what flags to set on the new file descriptor</param>
     /// <param name="outputFd">The output file descriptor</param>
     /// <returns></returns>
-    protected PathOpenResult PathOpen(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, OpenFlags openFlags, FileRights baseRights, FileRights inheritingRights, FdFlags fdFlags, out FileDescriptor outputFd);
+    public PathOpenResult PathOpen(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, OpenFlags openFlags, FileRights baseRights, FileRights inheritingRights, FdFlags fdFlags, out FileDescriptor outputFd);
 
     /// <summary>
     /// Close the given file descriptor (clean up all resources associated with it)
@@ -53,7 +53,7 @@ public interface IWasiFileSystem
     /// <param name="caller">Context for this call</param>
     /// <param name="fd"></param>
     /// <returns></returns>
-    protected internal CloseResult Close(Caller caller, FileDescriptor fd);
+    public CloseResult Close(Caller caller, FileDescriptor fd);
 
     /// <summary>
     /// Read list of items from a directory.
@@ -65,7 +65,7 @@ public interface IWasiFileSystem
     /// <param name="cookie">Indicates which directory entry to start with. Each `DirEnt` specifies the `cookie` of the next `DirEnt` in the sequence</param>
     /// <param name="bufUsed">The number of bytes used in `buffer`, if less than the size of the buffer that indicates that the end of the directory has been read</param>
     /// <returns></returns>
-    protected ReadDirectoryResult ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> buffer, long cookie, out uint bufUsed);
+    public ReadDirectoryResult ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> buffer, long cookie, out uint bufUsed);
 
     /// <summary>
     /// Create a directory at the given path, relative to the given fd
@@ -74,7 +74,7 @@ public interface IWasiFileSystem
     /// <param name="fd">Root directory which the path is relative to</param>
     /// <param name="path">Path of the new directory to create</param>
     /// <returns></returns>
-    protected WasiError PathCreateDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
+    public WasiError PathCreateDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
 
     /// <summary>
     /// Write to a given file descriptor at the current offset
@@ -84,7 +84,7 @@ public interface IWasiFileSystem
     /// <param name="iovs">set of buffers to write</param>
     /// <param name="nwritten">total number of bytes written</param>
     /// <returns></returns>
-    protected WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten);
+    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten);
 
     /// <summary>
     /// Write to a given file descriptor without updating the offset
@@ -95,7 +95,7 @@ public interface IWasiFileSystem
     /// <param name="offset"></param>
     /// <param name="nwrittenOutput"></param>
     /// <returns></returns>
-    protected internal WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nwrittenOutput);
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nwrittenOutput);
 
     /// <summary>
     /// Get a "FileStat" object for the given file descriptor
@@ -104,7 +104,7 @@ public interface IWasiFileSystem
     /// <param name="fd"></param>
     /// <param name="result"></param>
     /// <returns></returns>
-    protected internal StatResult StatGet(Caller caller, FileDescriptor fd, out FileStat result);
+    public StatResult StatGet(Caller caller, FileDescriptor fd, out FileStat result);
 
     /// <summary>
     /// Adjust the size of an open file. If this increases the file's size, the extra bytes are filled with zeros. Note: This is similar to ftruncate in POSIX.
@@ -113,9 +113,9 @@ public interface IWasiFileSystem
     /// <param name="fileDescriptor"></param>
     /// <param name="size"></param>
     /// <returns></returns>
-    protected WasiError StatSetSize(Caller caller, FileDescriptor fileDescriptor, long size);
+    public WasiError StatSetSize(Caller caller, FileDescriptor fileDescriptor, long size);
 
-    protected WasiError FdStatSetTimes(Caller caller, FileDescriptor fileDescriptor, long atime, long mtime, FstFlags fstFlags);
+    public WasiError FdStatSetTimes(Caller caller, FileDescriptor fileDescriptor, long atime, long mtime, FstFlags fstFlags);
 
     /// <summary>
     /// Adjust the timestamps of a file or directory. Note: This is similar to `utimensat` in POSIX.
@@ -128,7 +128,7 @@ public interface IWasiFileSystem
     /// <param name="mtime"></param>
     /// <param name="fstFlags"></param>
     /// <returns></returns>
-    protected WasiError PathFileStatSetTimes(Caller caller, FileDescriptor fileDescriptor, LookupFlags lookup, ReadOnlySpan<byte> path, long atime, long mtime, FstFlags fstFlags);
+    public WasiError PathFileStatSetTimes(Caller caller, FileDescriptor fileDescriptor, LookupFlags lookup, ReadOnlySpan<byte> path, long atime, long mtime, FstFlags fstFlags);
 
     /// <summary>
     /// Get a "FileStat" object for the object at the path relative to the given file descriptor
@@ -139,7 +139,7 @@ public interface IWasiFileSystem
     /// <param name="result"></param>
     /// <param name="lookup"></param>
     /// <returns></returns>
-    protected StatResult PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, out FileStat result);
+    public StatResult PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, out FileStat result);
 
     /// <summary>
     /// Read bytes from a file descriptor into a set of buffers
@@ -149,7 +149,7 @@ public interface IWasiFileSystem
     /// <param name="iovs">Buffer of buffers to read data into sequentially</param>
     /// <param name="nread">Output for the total number of bytes read</param>
     /// <returns></returns>
-    protected ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread);
+    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread);
 
     /// <summary>
     /// Read bytes from a file descriptor into a set of buffers, without using or updating the file offset
@@ -160,7 +160,7 @@ public interface IWasiFileSystem
     /// <param name="offset">Offset into the file</param>
     /// <param name="nread">Output for the total number of bytes read</param>
     /// <returns></returns>
-    protected ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread);
+    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread);
 
     /// <summary>
     /// Seek position to a new offset
@@ -171,7 +171,7 @@ public interface IWasiFileSystem
     /// <param name="whence"></param>
     /// <param name="newOffset"></param>
     /// <returns></returns>
-    protected internal SeekResult Seek(Caller caller, FileDescriptor fd, long offset, Whence whence, ref ulong newOffset);
+    public SeekResult Seek(Caller caller, FileDescriptor fd, long offset, Whence whence, ref ulong newOffset);
 
     /// <summary>
     /// Get the current position in a file descriptor
@@ -191,7 +191,7 @@ public interface IWasiFileSystem
     /// <param name="caller">Context for this call</param>
     /// <param name="fd"></param>
     /// <returns></returns>
-    protected SyncResult Sync(Caller caller, FileDescriptor fd);
+    public SyncResult Sync(Caller caller, FileDescriptor fd);
 
     /// <summary>
     /// Synchronize the data of a file to disk.
@@ -204,9 +204,9 @@ public interface IWasiFileSystem
         return Sync(caller, fd);
     }
 
-    protected WasiError PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
+    public WasiError PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
 
-    protected WasiError PathUnlinkFile(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
+    public WasiError PathUnlinkFile(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
 
     /// <summary>
     /// Rename a file or directory. This is similar to `renameat` in POSIX.
@@ -217,7 +217,7 @@ public interface IWasiFileSystem
     /// <param name="newFd">The working directory at which the resolution of the new path starts.</param>
     /// <param name="newPath">The destination path to which to rename the file or directory.</param>
     /// <returns></returns>
-    protected WasiError PathRename(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> oldPath, FileDescriptor newFd, ReadOnlySpan<byte> newPath);
+    public WasiError PathRename(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> oldPath, FileDescriptor newFd, ReadOnlySpan<byte> newPath);
 
     /// <summary>
     /// Provide file advisory information on a file descriptor. This is similar to posix_fadvise in POSIX.
@@ -228,7 +228,7 @@ public interface IWasiFileSystem
     /// <param name="filesize">The length of the region to which the advisory applies.</param>
     /// <param name="advice">The advice.</param>
     /// <returns></returns>
-    protected WasiError FdAdvise(Caller caller, FileDescriptor fd, long offset, long filesize, Advice advice)
+    public WasiError FdAdvise(Caller caller, FileDescriptor fd, long offset, long filesize, Advice advice)
     {
         // First check the file actually exists by using filestat
         var statResult = StatGet(caller, fd, out _);
@@ -248,32 +248,32 @@ public interface IWasiFileSystem
     /// <param name="offset">The offset within the file to allocate.</param>
     /// <param name="length">The length of the region to allocate.</param>
     /// <returns></returns>
-    protected WasiError FdAllocate(Caller caller, FileDescriptor fd, long offset, long length);
+    public WasiError FdAllocate(Caller caller, FileDescriptor fd, long offset, long length);
 
-    protected WasiError FdStatGet(Caller caller, FileDescriptor fd, out FdStat output);
+    public WasiError FdStatGet(Caller caller, FileDescriptor fd, out FdStat output);
 
-    protected WasiError FdStatSetFlags(Caller caller, FileDescriptor fd, FdFlags flags);
+    public WasiError FdStatSetFlags(Caller caller, FileDescriptor fd, FdFlags flags);
 
-    protected WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
+    public WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
     {
         // Assume links are not supported, so therefore one doesn't exist
         nwritten = 0;
         return WasiError.ENOENT;
     }
 
-    protected WasiError PathLink(Caller caller, FileDescriptor sourceRootFd, ReadOnlySpan<byte> sourcePath, int lookupFlags, FileDescriptor destRootFd, ReadOnlySpan<byte> destPath)
+    public WasiError PathLink(Caller caller, FileDescriptor sourceRootFd, ReadOnlySpan<byte> sourcePath, int lookupFlags, FileDescriptor destRootFd, ReadOnlySpan<byte> destPath)
     {
         // Assume hard links are not supported, so therefore one can't be created
         return WasiError.ENOTSUP;
     }
 
-    protected WasiError PathSymLink(Caller caller, ReadOnlySpan<byte> oldPath, FileDescriptor fileDescriptor, ReadOnlySpan<byte> newPath)
+    public WasiError PathSymLink(Caller caller, ReadOnlySpan<byte> oldPath, FileDescriptor fileDescriptor, ReadOnlySpan<byte> newPath)
     {
         // Assume links are not supported, so therefore one can't be created
         return WasiError.ENOTSUP;
     }
 
-    protected WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to);
+    public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to);
 
     ///// <summary>
     ///// Check how many bytes can be read from the given file descriptor. This is used by poll_oneoff in IVirtualEventPoll.
@@ -281,7 +281,7 @@ public interface IWasiFileSystem
     ///// <param name="fd"></param>
     ///// <param name="readableBytes"></param>
     ///// <returns></returns>
-    //protected abstract WasiError PollReadableBytes(FileDescriptor fd, out ulong readableBytes);
+    //public abstract WasiError PollReadableBytes(FileDescriptor fd, out ulong readableBytes);
 
     ///// <summary>
     ///// Check how many bytes can be written to the file descriptor. This is used by poll_oneoff in IVirtualEventPoll.
@@ -289,7 +289,7 @@ public interface IWasiFileSystem
     ///// <param name="fd"></param>
     ///// <param name="writableBytes"></param>
     ///// <returns></returns>
-    //protected abstract WasiError PollWritableBytes(FileDescriptor fd, out ulong writableBytes);
+    //public abstract WasiError PollWritableBytes(FileDescriptor fd, out ulong writableBytes);
 
     void IWasiFeature.DefineOn(Linker linker)
     {

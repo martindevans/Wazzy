@@ -12,17 +12,14 @@ public class MappedZipArchiveDirectoryContent
         : BaseDirectoryHandle
     {
         private readonly MappedZipArchiveDirectoryContent _dir;
-        private readonly ZipArchive _archive;
 
         public Handle(MappedZipArchiveDirectoryContent parent)
         {
             _dir = parent;
-            _archive = ZipFile.OpenRead(parent._info.FullName);
         }
 
         public override void Dispose()
         {
-            _archive.Dispose();
         }
 
         public override IDirectory Directory => _dir;
@@ -38,8 +35,6 @@ public class MappedZipArchiveDirectoryContent
         }
     }
 
-    private readonly IVFSClock _clock;
-    private readonly FileInfo _info;
     private readonly ZipArchive _archive;
     private readonly Dictionary<string, DirectoryItem?> _childCache = new();
     private IReadOnlyList<DirectoryItem>? _rootEnumerationCache;
@@ -48,35 +43,20 @@ public class MappedZipArchiveDirectoryContent
 
     public FileType FileType => FileType.Directory;
 
-    public ulong AccessTime
-    {
-        get => _clock.FromRealTime(new DateTimeOffset(_info.LastAccessTimeUtc));
-        set => _info.LastAccessTimeUtc = _clock.ToRealTime(value).DateTime;
-    }
-
-    public ulong ModificationTime
-    {
-        get => _clock.FromRealTime(new DateTimeOffset(_info.LastWriteTimeUtc));
-        set => _info.LastWriteTime = _clock.ToRealTime(value).DateTime;
-    }
-
-    public ulong ChangeTime
-    {
-        get => ModificationTime;
-        set => ModificationTime = value;
-    }
+    public ulong AccessTime { get; set; }
+    public ulong ModificationTime { get; set; }
+    public ulong ChangeTime { get; set; }
 
     public MappedZipArchiveDirectoryContent(string archivePath, IVFSClock clock)
+        : this(File.OpenRead(archivePath), clock)
     {
-        _clock = clock;
-        _info = new FileInfo(archivePath);
-        _archive = ZipFile.OpenRead(archivePath);
     }
 
-    public void Delete()
+    public MappedZipArchiveDirectoryContent(Stream archiveStream, IVFSClock clock)
     {
-        if (CanMove)
-            _info.Delete();
+        _archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, false);
+
+        AccessTime = ModificationTime = ChangeTime = clock.GetTime();
     }
 
     public IFilesystemEntry ToInMemory()

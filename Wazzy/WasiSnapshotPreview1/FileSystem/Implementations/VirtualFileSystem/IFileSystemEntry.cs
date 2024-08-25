@@ -12,8 +12,6 @@ public interface IFilesystemEntry
 
     ulong ChangeTime { get; set; }
 
-    void Delete();
-
     IFilesystemEntry ToInMemory();
 
     public WasiError SetTimes(ulong timestamp, long atime, long mtime, FstFlags fstFlags)

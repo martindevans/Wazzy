@@ -165,4 +165,23 @@ public class DirectoryBuilder
 
         return this;
     }
+
+    /// <summary>
+    /// Map a zip archive into the filesystem as a read only directory.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="archive"></param>
+    /// <returns></returns>
+    public DirectoryBuilder MapReadonlyZipArchiveDirectory(
+        string name,
+        Stream archive)
+    {
+        var path = _fullPath + '/' + ValidatePath(name);
+
+        _contentConstructors.Add(
+            (path, context => new MappedZipArchiveDirectoryContent(archive, context.Clock))
+        );
+
+        return this;
+    }
 }

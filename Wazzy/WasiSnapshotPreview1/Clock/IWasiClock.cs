@@ -22,7 +22,7 @@ public interface IWasiClock
     /// <param name="precision">The maximum lag (exclusive) that the returned time value may have, compared to its actual value</param>
     /// <param name="retValue"></param>
     /// <returns></returns>
-    protected WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue);
+    protected internal WasiError TimeGet(Caller caller, ClockId id, ulong precision, out ulong retValue);
 
     /// <summary>
     /// Return the resolution of a clock.

@@ -93,9 +93,15 @@ public class ConsoleLog
                 Console.ForegroundColor = File._color ?? prevc;
                 {
                     if (File._error)
+                    {
                         Console.Error.Write(msg);
+                        Console.Error.Flush();
+                    }
                     else
+                    {
                         Console.Write(msg);
+                        Console.Out.Flush();
+                    }
                 }
                 Console.ForegroundColor = prevc;
             }

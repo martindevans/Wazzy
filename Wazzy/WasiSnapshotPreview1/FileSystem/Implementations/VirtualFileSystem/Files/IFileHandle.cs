@@ -141,7 +141,7 @@ public interface IFileHandle
     }
 }
 
-internal abstract class BaseFileHandle<T>
+public abstract class BaseFileHandle<T>
     : IFileHandle
     where T : IFile
 {

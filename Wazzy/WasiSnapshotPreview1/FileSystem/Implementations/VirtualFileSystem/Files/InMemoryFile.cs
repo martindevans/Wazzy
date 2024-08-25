@@ -104,20 +104,18 @@ public class InMemoryFile
     public ulong ModificationTime { get; set; }
     public ulong ChangeTime { get; set; }
 
-    internal InMemoryFile(ulong timeNow, ReadOnlySpan<byte> content, MemoryStream? backing = null)
+    public InMemoryFile(ulong time, ReadOnlySpan<byte> content, MemoryStream? backing = null)
     {
         _memory = backing ?? new MemoryStream();
         _memory.Write(content);
 
-        AccessTime = ModificationTime = ChangeTime = timeNow;
+        AccessTime = ModificationTime = ChangeTime = time;
     }
 
     IFileHandle IFile.Open(FdFlags flags)
     {
         return new Handle(this, flags);
     }
-
-    void IFilesystemEntry.Delete() { }
 
     public void MoveTo(Stream stream, ulong timestamp)
     {
