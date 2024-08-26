@@ -302,11 +302,6 @@ public sealed class VirtualFileSystem
         }
     }
 
-    public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to)
-    {
-        return WasiError.ENOTSUP;
-    }
-
     PathOpenResult IWasiFileSystem.PathOpen(
         Caller caller,
         FileDescriptor fd,

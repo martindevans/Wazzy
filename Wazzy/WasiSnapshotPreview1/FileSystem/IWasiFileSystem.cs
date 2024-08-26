@@ -273,7 +273,11 @@ public interface IWasiFileSystem
         return WasiError.ENOTSUP;
     }
 
-    public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to);
+    public WasiError FdRenumber(Caller caller, FileDescriptor from, FileDescriptor to)
+    {
+        // Assume renumbering is not supported
+        return WasiError.ENOTSUP;
+    }
 
     ///// <summary>
     ///// Check how many bytes can be read from the given file descriptor. This is used by poll_oneoff in IVirtualEventPoll.
