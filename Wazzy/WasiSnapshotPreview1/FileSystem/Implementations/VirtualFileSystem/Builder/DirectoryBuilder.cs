@@ -73,6 +73,9 @@ public class DirectoryBuilder
 
     public DirectoryBuilder CreateVirtualDirectory(string name, Action<DirectoryBuilder> content)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Cannot create a virtual directory with an empty name");
+
         var path = _fullPath + '/' + ValidatePath(name);
 
         _contentConstructors.Add(
@@ -96,6 +99,9 @@ public class DirectoryBuilder
         MemoryStream? backing = null,
         bool isReadOnly = false)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Cannot create an in memory file with an empty name");
+
         _contentConstructors.Add(
             (_fullPath + '/' + ValidatePath(name), context =>
             {
@@ -114,6 +120,8 @@ public class DirectoryBuilder
         string hostPath,
         bool isReadonly = false)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Cannot map a file with an empty name");
         if (!File.Exists(hostPath))
             throw new ArgumentException($"file {hostPath} does not exist", nameof(hostPath));
 
@@ -129,6 +137,8 @@ public class DirectoryBuilder
         string hostPath,
         bool isReadOnly = false)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Cannot map a directory with an empty name");
         if (!Directory.Exists(hostPath))
             throw new ArgumentException($"directory {hostPath} does not exist", nameof(hostPath));
 
