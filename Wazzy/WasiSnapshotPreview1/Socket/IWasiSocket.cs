@@ -19,8 +19,9 @@ public interface IWasiSocket
     /// <param name="caller"></param>
     /// <param name="fd"></param>
     /// <param name="flags"></param>
+    /// <param name="roFd">Output FD is result is OK</param>
     /// <returns></returns>
-    protected WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags);
+    protected WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags, out FileDescriptor roFd);
 
     /// <summary>
     /// Receive a message from a socket.
@@ -60,10 +61,11 @@ public interface IWasiSocket
     void IWasiFeature.DefineOn(Linker linker)
     {
         linker.DefineFunction(Module, "sock_accept",
-            (Caller caller, int fd, int flags) => (int)Accept(
+            (Caller caller, int fd, int flags, int roFd) => (int)Accept(
                 caller,
                 new FileDescriptor(fd),
-                (FdFlags)flags
+                (FdFlags)flags,
+                out new Pointer<FileDescriptor>(roFd).Deref(caller)
             )
         );
 

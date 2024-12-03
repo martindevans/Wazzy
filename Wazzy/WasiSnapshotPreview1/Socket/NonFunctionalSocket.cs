@@ -10,13 +10,14 @@ namespace Wazzy.WasiSnapshotPreview1.Socket;
 public class NonFunctionalSocket
     : IWasiSocket
 {
-    public WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags)
+    public WasiError Accept(Caller caller, FileDescriptor fd, FdFlags flags, out FileDescriptor outFd)
     {
         // POSIX `accept(2)` (https://man7.org/linux/man-pages/man2/accept.2.html) specifies EPERM error as:
         //
         //  > Firewall rules forbid connection.
         //
         // Which is a good way to fail. Everything that uses networking should have some way to handle that kind of error.
+        outFd = default;
         return WasiError.EPERM;
     }
 
