@@ -6,12 +6,10 @@ using System.Text;
 using Wasmtime;
 using Wazzy.Async;
 using Wazzy.Async.Extensions;
-using Wazzy.Coroutines;
 using Wazzy.Extensions;
 using Wazzy.Interop;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Directories;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem;
 
@@ -1157,7 +1155,7 @@ public sealed class VirtualFileSystem
         public AsyncCallState(Task<TResult> work, [CallerMemberName] string name = "")
         {
             _name = name;
-            _work = Task.Run(async () => await work);
+            _work = Task.Run(async () => await work.ConfigureAwait(false));
         }
 
         public void Check([CallerMemberName] string name = "")
