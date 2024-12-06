@@ -245,6 +245,9 @@
     <None Update="wasi-testsuite\tests\c\testsuite\lseek.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="wasi-testsuite\tests\c\testsuite\lseek_async.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="wasi-testsuite\tests\c\testsuite\manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -257,6 +260,9 @@
     <None Update="wasi-testsuite\tests\c\testsuite\pread-with-access.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="wasi-testsuite\tests\c\testsuite\pread-with-access_async.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="wasi-testsuite\tests\c\testsuite\pwrite-with-access.c">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -264,6 +270,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="wasi-testsuite\tests\c\testsuite\pwrite-with-access.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="wasi-testsuite\tests\c\testsuite\pwrite-with-access_async.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="wasi-testsuite\tests\c\testsuite\stat-dev-ino.c">
@@ -276,6 +285,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="wasi-testsuite\tests\rust\testsuite\big_random_buf.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="wasi-testsuite\tests\rust\testsuite\big_random_buf_async.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="wasi-testsuite\tests\rust\testsuite\clock_time_get.wasm">
@@ -324,6 +336,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="wasi-testsuite\tests\rust\testsuite\fd_flags_set.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="wasi-testsuite\tests\rust\testsuite\fd_flags_set_async.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="wasi-testsuite\tests\rust\testsuite\fd_readdir.json">

@@ -37,9 +37,9 @@ internal class MappedFile
             _stream.Dispose();
         }
 
-        public override uint Read(Span<byte> bytes, ulong timestamp)
+        public override async Task<uint> Read(Memory<byte> memory, ulong timestamp)
         {
-            return (uint)_stream.Read(bytes);
+            return (uint)await _stream.ReadAsync(memory);
         }
 
         public override void Truncate(ulong timestamp, long size)

@@ -21,6 +21,12 @@ namespace Wazzy.Tests.wasi_testsuite.tests.rust
         }
 
         [TestMethod]
+        public void BigRandomBufAsync()
+        {
+            Run("rust/testsuite/big_random_buf_async");
+        }
+
+        [TestMethod]
         public void ClockTimeGet()
         {
             Run("rust/testsuite/clock_time_get");
@@ -74,6 +80,12 @@ namespace Wazzy.Tests.wasi_testsuite.tests.rust
         public void FdFlagsSet()
         {
             Run("rust/testsuite/fd_flags_set", false);
+        }
+
+        [TestMethod]
+        public void FdFlagsSetAsync()
+        {
+            Run("rust/testsuite/fd_flags_set_async", false);
         }
 
         // todo:failing due to missing two files in an empty directory: . and ..

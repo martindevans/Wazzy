@@ -29,7 +29,7 @@ public class StringBuilderLog
             Sync();
         }
 
-        public override uint Read(Span<byte> bytes, ulong timestamp)
+        public override Task<uint> Read(Memory<byte> bytes, ulong timestamp)
         {
             throw new NotSupportedException("Cannot read StringBuilderLog");
         }

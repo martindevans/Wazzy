@@ -32,7 +32,7 @@ public class ConsoleLog
             Sync();
         }
 
-        public override uint Read(Span<byte> bytes, ulong timestamp)
+        public override Task<uint> Read(Memory<byte> memory, ulong timestamp)
         {
             throw new NotSupportedException("Cannot read ConsoleLog");
         }

@@ -1,7 +1,12 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Wasmtime;
+using Wazzy.Async;
+using Wazzy.Async.Extensions;
+using Wazzy.Coroutines;
 using Wazzy.Extensions;
 using Wazzy.Interop;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Directories;
@@ -13,6 +18,8 @@ public sealed class VirtualFileSystem
     : IWasiFileSystem, IDisposable
 {
     private static readonly ReadOnlyMemory<byte> RootName = ReadOnlyMemory<byte>.Empty;
+
+    private IAsyncCallState? _asyncState;
 
     private readonly bool _readonly;
     private readonly IVFSClock _clock;
@@ -264,6 +271,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             result = default;
 
             // First 3 handles are stdin,out,err. 
@@ -283,6 +292,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             // First 3 handles are stdin,out,err.
             if (fd.Handle <= 2)
                 return PrestatDirNameResult.BadFileDescriptor;
@@ -316,6 +327,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             return PathOpen(caller, fd, lookup, path, openFlags, fdFlags, out outputFd);
         }
     }
@@ -483,6 +496,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             // Cannot close StdIn, StdOut or StdErr
             if (fd.Handle < 3)
                 return CloseResult.BadFileDescriptor;
@@ -502,6 +517,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             bufUsed = 0;
 
             var handle = GetHandle(fd);
@@ -573,6 +590,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             if (_readonly)
                 return WasiError.EROFS;
 
@@ -595,10 +614,13 @@ public sealed class VirtualFileSystem
         }
     }
 
+    #region write
     private WasiError FileWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten, long seek, Whence whence, bool restorePosition)
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var handle = GetHandle(fd);
             if (handle == null)
             {
@@ -649,11 +671,14 @@ public sealed class VirtualFileSystem
     {
         return FileWrite(caller, fd, iovs, out nwritten, offset, Whence.Set, true);
     }
+    #endregion
 
     WasiError IWasiFileSystem.FdAllocate(Caller caller, FileDescriptor fd, long offset, long length)
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             // Check that the handle exists
             var handle = GetHandle(fd);
             if (handle == null)
@@ -668,6 +693,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var handle = GetHandle(fd);
             if (handle == null)
                 return WasiError.EBADF;
@@ -687,6 +714,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var handle = GetHandle(fd);
             if (handle == null)
             {
@@ -703,11 +732,9 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return WasiError.EBADF;
+            CheckAsyncState();
 
-            return handle.SetFlags(flags);
+            return GetHandle(fd)?.SetFlags(flags) ?? WasiError.EBADF;
         }
     }
 
@@ -715,6 +742,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var handle = GetHandle(fd);
             if (handle == null)
                 return WasiError.EBADF;
@@ -727,6 +756,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             if (_readonly)
                 return WasiError.EROFS;
 
@@ -745,6 +776,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var handle = GetHandle(fd);
             if (handle == null)
             {
@@ -761,6 +794,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var openResult = PathOpen(caller, fd, lookup, path, OpenFlags.None, FdFlags.None, out var tmpFd);
             if (openResult != PathOpenResult.Success)
             {
@@ -779,81 +814,110 @@ public sealed class VirtualFileSystem
         }
     }
 
-    ReadResult IWasiFileSystem.Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread)
+    #region read
+    ReadResult IWasiFileSystem.Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, Pointer<uint> nreadPtr)
     {
         lock (_globalLock)
         {
-            nread = 0u;
-
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return ReadResult.BadFileDescriptor;
-
-            if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
-                return ReadResult.IsDirectory;
-
-            if (!fileHandle.File.IsReadable)
-                return ReadResult.Success;
-
-            var iovsSpan = iovs.GetSpan(caller);
-            for (var i = 0; i < iovs.Length; i++)
-            {
-                var span = iovsSpan[i].GetSpan(caller);
-                var read = fileHandle.Read(span, GetTimestamp());
-                nread += read;
-
-                if (read != span.Length)
-                    break;
-            }
-
-            return ReadResult.Success;
+            return (ReadResult)PollAsync(
+                caller,
+                caller => CoCreateReadTask(caller.GetMemory("memory")!, fd, iovs, null),
+                (caller, result) => nreadPtr.Deref(caller) = result.nread
+            );
         }
     }
 
-    ReadResult IWasiFileSystem.PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread)
+    ReadResult IWasiFileSystem.PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, Pointer<uint> nreadPtr)
     {
         lock (_globalLock)
         {
-            nread = 0;
+            return (ReadResult)PollAsync(
+                caller,
+                caller => CoCreateReadTask(caller.GetMemory("memory")!, fd, iovs, offset),
+                (caller, result) => nreadPtr.Deref(caller) = result.nread
+            );
+        }
+    }
 
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return ReadResult.BadFileDescriptor;
+    private record ReadResultData(WasiError ReturnCode, uint nread) : IAsyncReturn;
 
-            if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
-                return ReadResult.IsDirectory;
+    private async CoroutineTask<ReadResultData> CoCreateReadTask(Memory memory, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long? maybeOffset)
+    {
+        var handle = GetHandle(fd);
+        if (handle == null)
+            return new ReadResultData((WasiError)ReadResult.BadFileDescriptor, 0);
 
-            if (!fileHandle.File.IsReadable)
-                return ReadResult.Success;
+        if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
+            return new ReadResultData((WasiError)ReadResult.IsDirectory, 0);
 
+        if (!fileHandle.File.IsReadable)
+            return new ReadResultData((WasiError)ReadResult.Success, 0);
+
+        // If there's an offset, seek to it
+        ulong savedOffset = 0;
+        if (maybeOffset is long offset)
+        {
             // Save the current file offset
-            fileHandle.Seek(0, Whence.Current, out var saveOffset);
+            fileHandle.Seek(0, Whence.Current, out savedOffset);
 
             // Seek to the new offset
             fileHandle.Seek(offset, Whence.Set, out _);
+        }
 
-            var iovsSpan = iovs.GetSpan(caller);
-            for (var i = 0; i < iovs.Length; i++)
-            {
-                var span = iovsSpan[i].GetSpan(caller);
-                var read = fileHandle.Read(span, GetTimestamp());
-                nread += read;
+        // Do the reading into the iovs buffer
+        var nread = (uint)0;
+        for (var i = 0; i < iovs.Length; i++)
+        {
+            // Get an array that's the length of the span we want to read into
+            var (spanLength, temp) = GetReadBufferTempArray(i, memory, iovs);
 
-                if (read != span.Length)
-                    break;
-            }
+            // Read into that array
+            var read = await fileHandle.Read(temp.AsMemory(0, spanLength), GetTimestamp());
+            nread += read;
 
-            // Return to the saved offset
-            fileHandle.Seek((long)saveOffset, Whence.Set, out _);
+            // Copy array into WASM memory
+            ConsumeReadBufferTempArray(i, memory, iovs, temp);
 
-            return ReadResult.Success;
+            if (read != spanLength)
+                break;
+        }
+
+        // Restore the previous offset
+        if (maybeOffset.HasValue)
+            fileHandle.Seek((long)savedOffset, Whence.Set, out _);
+
+        return new ReadResultData((WasiError)ReadResult.Success, nread);
+
+
+
+        static (int, byte[]) GetReadBufferTempArray(int index, Memory memory, Buffer<Buffer<byte>> iovs)
+        {
+            var iovsSpan = iovs.GetSpan(memory);
+            var length = checked((int)iovsSpan[index].Length);
+            return (length, ArrayPool<byte>.Shared.Rent(length));
+        }
+
+        static void ConsumeReadBufferTempArray(int index, Memory memory, Buffer<Buffer<byte>> iovs, byte[] arr)
+        {
+            // Get the span in WASM memory
+            var iovsSpan = iovs.GetSpan(memory);
+            var iov = iovsSpan[index].GetSpan(memory);
+
+            // Copy data
+            arr.AsSpan(0, iov.Length).CopyTo(iov);
+
+            // Recycle temp
+            ArrayPool<byte>.Shared.Return(arr);
         }
     }
+    #endregion
 
     SeekResult IWasiFileSystem.Seek(Caller caller, FileDescriptor fd, long offset, Whence whence, ref ulong newOffset)
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var handle = GetHandle(fd);
             if (handle == null)
                 return SeekResult.BadFileDescriptor;
@@ -867,26 +931,33 @@ public sealed class VirtualFileSystem
 
     SyncResult IWasiFileSystem.Sync(Caller caller, FileDescriptor fd)
     {
-        return (SyncResult)WithHandle(caller, fd, static (_, handle) =>
+        lock (_globalLock)
         {
-            try
-            {
-                if (handle is IFileHandle file)
-                    file.Sync();
-            }
-            catch
-            {
-                return (int)SyncResult.IoError;
-            }
+            CheckAsyncState();
 
-            return (int)SyncResult.Success;
-        });
+            return (SyncResult)WithHandle(caller, fd, static (_, handle) =>
+            {
+                try
+                {
+                    if (handle is IFileHandle file)
+                        file.Sync();
+                }
+                catch
+                {
+                    return (int)SyncResult.IoError;
+                }
+
+                return (int)SyncResult.Success;
+            });
+        }
     }
 
     WasiError IWasiFileSystem.PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             if (_readonly)
                 return WasiError.EROFS;
 
@@ -923,6 +994,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             if (_readonly)
                 return WasiError.EROFS;
 
@@ -953,6 +1026,8 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             if (_readonly)
                 return WasiError.EROFS;
 
@@ -981,12 +1056,14 @@ public sealed class VirtualFileSystem
         }
     }
 
+    #region poll
     public WasiError PollReadableBytes(FileDescriptor fd, out ulong readableBytes)
     {
         readableBytes = 0;
-
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var result = GetFile(fd, out var file);
             if (result != WasiError.SUCCESS)
                 return result;
@@ -999,9 +1076,10 @@ public sealed class VirtualFileSystem
     public WasiError PollWritableBytes(FileDescriptor fd, out ulong writableBytes)
     {
         writableBytes = 0;
-
         lock (_globalLock)
         {
+            CheckAsyncState();
+
             var result = GetFile(fd, out var file);
             if (result != WasiError.SUCCESS)
                 return result;
@@ -1010,4 +1088,109 @@ public sealed class VirtualFileSystem
             return WasiError.SUCCESS;
         }
     }
+    #endregion
+
+    #region async machinery
+    private delegate CoroutineTask<TResult> CreateAsyncTask<TResult>(Caller caller);
+
+    private delegate void CompleteAsyncTask<in TResult>(Caller caller, TResult result);
+
+    private void CheckAsyncState([CallerMemberName] string name = "")
+    {
+        lock (_globalLock)
+        {
+            _asyncState?.Check(name);
+        }
+    }
+
+    private WasiError PollAsync<TResult>(Caller caller, CreateAsyncTask<TResult> create, CompleteAsyncTask<TResult>? complete, [CallerMemberName] string name = "")
+        where TResult : class, IAsyncReturn
+    {
+        lock (_globalLock)
+        {
+            _asyncState ??= new AsyncCallState<TResult>(create(caller), name);
+
+            var r = ((AsyncCallState<TResult>)_asyncState).Poll(caller, out var @return, name);
+            if (r != null && complete != null)
+                complete(caller, r);
+
+            return @return;
+        }
+    }
+
+    private interface IAsyncReturn
+    {
+        public WasiError ReturnCode { get; }
+    }
+
+    private interface IAsyncCallState
+    {
+        void Check([CallerMemberName] string name = "");
+    }
+
+    private class AsyncCallState<TResult>
+        : IAsyncCallState
+        where TResult : class, IAsyncReturn
+    {
+        private readonly string _name;
+        private readonly CoroutineTask<TResult> _work;
+
+        public AsyncCallState(CoroutineTask<TResult> work, [CallerMemberName] string name = "")
+        {
+            _name = name;
+            _work = work;
+        }
+
+        public void Check([CallerMemberName] string name = "")
+        {
+            if (name != _name)
+                throw new InvalidOperationException($"Suspended AsyncState is '{_name}', but polled with '{name}'");
+        }
+
+        public TResult? Poll(Caller caller, out WasiError @return, [CallerMemberName] string name = "")
+        {
+            Check(name);
+
+            if (caller.IsAsyncCapable())
+            {
+                caller.Resume(out var eState);
+                _work.Resume();
+
+                if (_work.TryGetResult(out var result))
+                {
+                    @return = result.ReturnCode;
+                    return result;
+                }
+                else
+                {
+                    @return = (WasiError)ushort.MaxValue;
+                    caller.Suspend(eState);
+                    return null;
+                }
+            }
+            else
+            {
+                // Poll the work on this thread until it is done
+                while (!_work.IsCompleted)
+                {
+                    // Do some work repeatedly, this will rapidly finish most jobs
+                    for (var i = 0; i < 16 && !_work.IsCompleted; i++)
+                        _work.Resume();
+
+                    // Ok, this is a long bit of work. Let's actually yield for real.
+                    if (!_work.IsCompleted)
+                        Thread.Yield();
+                }
+
+                // Extract the result (this should never fail, because the above loop exited indicating the work is complete)
+                if (!_work.TryGetResult(out var result))
+                    throw new InvalidOperationException("Async work failed to return a result after `IsCompleted == true`");
+
+                @return = result.ReturnCode;
+                return result;
+
+            }
+        }
+    }
+    #endregion
 }

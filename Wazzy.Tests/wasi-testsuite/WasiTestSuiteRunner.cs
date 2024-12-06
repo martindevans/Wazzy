@@ -2,6 +2,8 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using Wasmtime;
+using Wazzy.Async.Extensions;
+using Wazzy.Async;
 using Wazzy.WasiSnapshotPreview1.Clock;
 using Wazzy.WasiSnapshotPreview1.Environment;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
@@ -33,7 +35,8 @@ namespace Wazzy.Tests.wasi_testsuite
             _wasm = fullPath + ".wasm";
             Assert.IsTrue(File.Exists(_wasm), $"WASM File `{_wasm}` does not exist!");
 
-            var jsonPath = fullPath + ".json";
+            // Remove the _async tag when looking for the JSON spec file
+            var jsonPath = fullPath.Replace("_async", "") + ".json";
             if (!File.Exists(jsonPath))
             {
                 _spec = new JsonSpec();
@@ -86,13 +89,24 @@ namespace Wazzy.Tests.wasi_testsuite
             // Setup process to capture exit code
             helper.AddWasiFeature(new ThrowExitProcess());
 
-            // Run the test
+            // Run the test (pumping until async execution is complete)
             var instance = helper.Instantiate();
             var start = instance.GetAction("_start")!;
             var exitCode = 0;
             try
             {
                 start();
+
+                if (instance.IsAsyncCapable())
+                {
+                    while (instance.GetAsyncState() == AsyncState.Suspending)
+                    {
+                        var stack = instance.StopUnwind();
+                        instance.StartRewind(stack);
+
+                        start();
+                    }
+                }
             }
             catch (WasmtimeException e)
             {

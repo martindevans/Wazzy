@@ -109,15 +109,15 @@ public abstract class WriteToOutputFilesystem
         return StatResult.BadFileDescriptor;
     }
 
-    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread)
+    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, Pointer<uint> nread)
     {
-        nread = 0;
+        nread.Deref(caller) = 0;
         return ReadResult.BadFileDescriptor;
     }
 
-    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread)
+    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, Pointer<uint> nread)
     {
-        nread = 0;
+        nread.Deref(caller) = 0;
         return ReadResult.BadFileDescriptor;
     }
 

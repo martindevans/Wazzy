@@ -60,15 +60,33 @@ namespace Wazzy.Tests.wasi_testsuite.tests.c
         }
 
         [TestMethod]
+        public void LSeekAsync()
+        {
+            Run("c/testsuite/lseek_async", false);
+        }
+
+        [TestMethod]
         public void PReadWithAccess()
         {
             Run("c/testsuite/pread-with-access", false);
         }
 
         [TestMethod]
+        public void PReadWithAccessAsync()
+        {
+            Run("c/testsuite/pread-with-access_async", false);
+        }
+
+        [TestMethod]
         public void PWriteWithAccess()
         {
             Run("c/testsuite/pwrite-with-access", false);
+        }
+
+        [TestMethod]
+        public void PWriteWithAccessAsync()
+        {
+            Run("c/testsuite/pwrite-with-access_async", false);
         }
 
         // Note: VFS does not support inodes (everything has inode == 0)

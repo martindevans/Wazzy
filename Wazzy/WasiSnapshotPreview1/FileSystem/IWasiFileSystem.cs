@@ -149,7 +149,7 @@ public interface IWasiFileSystem
     /// <param name="iovs">Buffer of buffers to read data into sequentially</param>
     /// <param name="nread">Output for the total number of bytes read</param>
     /// <returns></returns>
-    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, out uint nread);
+    public ReadResult Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, Pointer<uint> nread);
 
     /// <summary>
     /// Read bytes from a file descriptor into a set of buffers, without using or updating the file offset
@@ -160,7 +160,7 @@ public interface IWasiFileSystem
     /// <param name="offset">Offset into the file</param>
     /// <param name="nread">Output for the total number of bytes read</param>
     /// <returns></returns>
-    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, out uint nread);
+    public ReadResult PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, Pointer<uint> nread);
 
     /// <summary>
     /// Seek position to a new offset
@@ -382,7 +382,7 @@ public interface IWasiFileSystem
                 c,
                 new FileDescriptor(fd),
                 new Buffer<Buffer<byte>>(iovsAddr, (uint)iovsCount),
-                out new Pointer<uint>(nreadAddr).Deref(c)
+                new Pointer<uint>(nreadAddr)
             )
         );
 
@@ -392,7 +392,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 new Buffer<Buffer<byte>>(iovsAddr, (uint)iovsCount),
                 offset,
-                out new Pointer<uint>(nreadAddr).Deref(c)
+                new Pointer<uint>(nreadAddr)
             )
         );
 

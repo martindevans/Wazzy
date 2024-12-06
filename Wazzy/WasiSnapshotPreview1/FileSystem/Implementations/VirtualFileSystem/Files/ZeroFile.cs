@@ -23,12 +23,12 @@ public class ZeroFile
         {
         }
 
-        public override uint Read(Span<byte> bytes, ulong timestamp)
+        public override Task<uint> Read(Memory<byte> bytes, ulong timestamp)
         {
             TryRead(timestamp);
 
-            bytes.Clear();
-            return (uint)bytes.Length;
+            bytes.Span.Clear();
+            return Task.FromResult((uint)bytes.Length);
         }
 
         public override void Truncate(ulong timestamp, long size)

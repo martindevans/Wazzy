@@ -53,12 +53,12 @@ public class MappedZipEntryFile
             return 0;
         }
 
-        public override uint Read(Span<byte> bytes, ulong timestamp)
+        public override async Task<uint> Read(Memory<byte> bytes, ulong timestamp)
         {
             File.AccessTime = timestamp;
 
             _stream.Seek((long)Position, SeekOrigin.Begin);
-            var read = _stream.Read(bytes);
+            var read = await _stream.ReadAsync(bytes);
             Position += (ulong)read;
 
             return (uint)read;

@@ -38,15 +38,15 @@ public class InMemoryFile
             File._memory.SetLength(size);
         }
 
-        public override uint Read(Span<byte> bytes, ulong timestamp)
+        public override Task<uint> Read(Memory<byte> memory, ulong timestamp)
         {
             TryRead(timestamp);
 
             File._memory.Seek(_position, SeekOrigin.Begin);
-            var read = File._memory.Read(bytes);
+            var read = File._memory.Read(memory.Span);
             _position += read;
 
-            return (uint)read;
+            return Task.FromResult((uint)read);
         }
 
         public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)

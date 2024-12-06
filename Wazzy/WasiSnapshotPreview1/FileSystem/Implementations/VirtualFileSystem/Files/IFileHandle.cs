@@ -43,7 +43,7 @@ public interface IFileHandle
     /// <param name="bytes">Byte span to read into</param>
     /// <param name="timestamp">Timestamp of "now", used to update file metadata</param>
     /// <returns>Count of read bytes</returns>
-    uint Read(Span<byte> bytes, ulong timestamp);
+    Task<uint> Read(Memory<byte> bytes, ulong timestamp);
 
     /// <summary>
     /// Change the "Position" property
@@ -188,7 +188,7 @@ public abstract class BaseFileHandle<T>
         return WasiError.SUCCESS;
     }
 
-    public abstract uint Read(Span<byte> bytes, ulong timestamp);
+    public abstract Task<uint> Read(Memory<byte> bytes, ulong timestamp);
 
     public abstract void Truncate(ulong timestamp, long size);
 
