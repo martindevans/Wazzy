@@ -914,7 +914,7 @@ public sealed class VirtualFileSystem
         {
             var iov = iovsSpan[i].GetSpan(caller);
 
-            if (iov.Length > data.Length)
+            if (data.Length >= iov.Length)
             {
                 data[..iov.Length].CopyTo(iov);
                 data = data[iov.Length..];
