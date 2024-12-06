@@ -11,6 +11,7 @@ using Wazzy.Extensions;
 using Wazzy.Interop;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Directories;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem;
 
@@ -819,10 +820,19 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
-            return (ReadResult)PollAsync(
+            return (ReadResult)PollAsync<ReadResultData>(
                 caller,
-                caller => CoCreateReadTask(caller.GetMemory("memory")!, fd, iovs, null),
-                (caller, result) => nreadPtr.Deref(caller) = result.nread
+                caller => CoCreateReadTask(fd, GetTotalIovsBufferLength(caller, iovs), null),
+                (caller, result) =>
+                {
+                    nreadPtr.Deref(caller) = result.NRead;
+
+                    if (result.DataBuffer != null)
+                    {
+                        CopyFlatBufferToIovsBuffer(result.DataBuffer.AsSpan(0, (int)result.NRead), caller, iovs);
+                        ArrayPool<byte>.Shared.Return(result.DataBuffer, true);
+                    }
+                }
             );
         }
     }
@@ -833,15 +843,24 @@ public sealed class VirtualFileSystem
         {
             return (ReadResult)PollAsync(
                 caller,
-                caller => CoCreateReadTask(caller.GetMemory("memory")!, fd, iovs, offset),
-                (caller, result) => nreadPtr.Deref(caller) = result.nread
+                caller => CoCreateReadTask(fd, GetTotalIovsBufferLength(caller, iovs), offset),
+                (caller, result) =>
+                {
+                    nreadPtr.Deref(caller) = result.NRead;
+
+                    if (result.DataBuffer != null)
+                    {
+                        CopyFlatBufferToIovsBuffer(result.DataBuffer.AsSpan(0, (int)result.NRead), caller, iovs);
+                        ArrayPool<byte>.Shared.Return(result.DataBuffer, true);
+                    }
+                }
             );
         }
     }
 
-    private record ReadResultData(WasiError ReturnCode, uint nread) : IAsyncReturn;
+    private record ReadResultData(WasiError ReturnCode, uint NRead, byte[]? DataBuffer = null) : IAsyncReturn;
 
-    private async CoroutineTask<ReadResultData> CoCreateReadTask(Memory memory, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long? maybeOffset)
+    private async Task<ReadResultData> CoCreateReadTask(FileDescriptor fd, int totalReadLength, long? maybeOffset)
     {
         var handle = GetHandle(fd);
         if (handle == null)
@@ -864,50 +883,47 @@ public sealed class VirtualFileSystem
             fileHandle.Seek(offset, Whence.Set, out _);
         }
 
-        // Do the reading into the iovs buffer
-        var nread = (uint)0;
-        for (var i = 0; i < iovs.Length; i++)
-        {
-            // Get an array that's the length of the span we want to read into
-            var (spanLength, temp) = GetReadBufferTempArray(i, memory, iovs);
+        // Borrow a buffer large enough to hold the entire read
+        var tempBuffer = ArrayPool<byte>.Shared.Rent(totalReadLength);
 
-            // Read into that array
-            var read = await fileHandle.Read(temp.AsMemory(0, spanLength), GetTimestamp());
-            nread += read;
+        // Read data into buffer
+        var nread = await fileHandle.Read(tempBuffer.AsMemory(0, totalReadLength), GetTimestamp());
 
-            // Copy array into WASM memory
-            ConsumeReadBufferTempArray(i, memory, iovs, temp);
-
-            if (read != spanLength)
-                break;
-        }
-
-        // Restore the previous offset
+        // Restore the previous offset if necessary
         if (maybeOffset.HasValue)
             fileHandle.Seek((long)savedOffset, Whence.Set, out _);
 
-        return new ReadResultData((WasiError)ReadResult.Success, nread);
+        return new ReadResultData((WasiError)ReadResult.Success, nread, tempBuffer);
+    }
 
+    private static int GetTotalIovsBufferLength(Caller caller, Buffer<Buffer<byte>> iovs)
+    {
+        var total = 0;
 
+        var iovsSpan = iovs.GetSpan(caller);
+        for (var i = 0; i < iovsSpan.Length; i++)
+            total += checked((int)iovsSpan[i].Length);
 
-        static (int, byte[]) GetReadBufferTempArray(int index, Memory memory, Buffer<Buffer<byte>> iovs)
+        return total;
+    }
+
+    private static void CopyFlatBufferToIovsBuffer(ReadOnlySpan<byte> data, Caller caller, Buffer<Buffer<byte>> iovs)
+    {
+        var iovsSpan = iovs.GetSpan(caller);
+        for (var i = 0; i < iovsSpan.Length; i++)
         {
-            var iovsSpan = iovs.GetSpan(memory);
-            var length = checked((int)iovsSpan[index].Length);
-            return (length, ArrayPool<byte>.Shared.Rent(length));
-        }
+            var iov = iovsSpan[i].GetSpan(caller);
 
-        static void ConsumeReadBufferTempArray(int index, Memory memory, Buffer<Buffer<byte>> iovs, byte[] arr)
-        {
-            // Get the span in WASM memory
-            var iovsSpan = iovs.GetSpan(memory);
-            var iov = iovsSpan[index].GetSpan(memory);
-
-            // Copy data
-            arr.AsSpan(0, iov.Length).CopyTo(iov);
-
-            // Recycle temp
-            ArrayPool<byte>.Shared.Return(arr);
+            if (iov.Length > data.Length)
+            {
+                data[..iov.Length].CopyTo(iov);
+                data = data[iov.Length..];
+            }
+            else
+            {
+                data.CopyTo(iov);
+                break;
+            }
         }
     }
     #endregion
@@ -1091,7 +1107,7 @@ public sealed class VirtualFileSystem
     #endregion
 
     #region async machinery
-    private delegate CoroutineTask<TResult> CreateAsyncTask<TResult>(Caller caller);
+    private delegate Task<TResult> CreateAsyncTask<TResult>(Caller caller);
 
     private delegate void CompleteAsyncTask<in TResult>(Caller caller, TResult result);
 
@@ -1112,7 +1128,10 @@ public sealed class VirtualFileSystem
 
             var r = ((AsyncCallState<TResult>)_asyncState).Poll(caller, out var @return, name);
             if (r != null && complete != null)
+            {
                 complete(caller, r);
+                _asyncState = null;
+            }
 
             return @return;
         }
@@ -1133,12 +1152,12 @@ public sealed class VirtualFileSystem
         where TResult : class, IAsyncReturn
     {
         private readonly string _name;
-        private readonly CoroutineTask<TResult> _work;
+        private readonly Task<TResult> _work;
 
-        public AsyncCallState(CoroutineTask<TResult> work, [CallerMemberName] string name = "")
+        public AsyncCallState(Task<TResult> work, [CallerMemberName] string name = "")
         {
             _name = name;
-            _work = work;
+            _work = Task.Run(async () => await work);
         }
 
         public void Check([CallerMemberName] string name = "")
@@ -1154,42 +1173,22 @@ public sealed class VirtualFileSystem
             if (caller.IsAsyncCapable())
             {
                 caller.Resume(out var eState);
-                _work.Resume();
 
-                if (_work.TryGetResult(out var result))
+                if (!_work.IsCompleted)
                 {
-                    @return = result.ReturnCode;
-                    return result;
-                }
-                else
-                {
-                    @return = (WasiError)ushort.MaxValue;
                     caller.Suspend(eState);
+                    @return = (WasiError)ushort.MaxValue;
                     return null;
                 }
             }
             else
             {
-                // Poll the work on this thread until it is done
-                while (!_work.IsCompleted)
-                {
-                    // Do some work repeatedly, this will rapidly finish most jobs
-                    for (var i = 0; i < 16 && !_work.IsCompleted; i++)
-                        _work.Resume();
-
-                    // Ok, this is a long bit of work. Let's actually yield for real.
-                    if (!_work.IsCompleted)
-                        Thread.Yield();
-                }
-
-                // Extract the result (this should never fail, because the above loop exited indicating the work is complete)
-                if (!_work.TryGetResult(out var result))
-                    throw new InvalidOperationException("Async work failed to return a result after `IsCompleted == true`");
-
-                @return = result.ReturnCode;
-                return result;
-
+                _work.Wait();
             }
+
+            var result = _work.Result;
+            @return = result.ReturnCode;
+            return result;
         }
     }
     #endregion
