@@ -16,6 +16,7 @@ public class VirtualFileSystemBuilder
     private IFile? _stderr;
     private IVFSClock? _clock;
     private bool _readonly;
+    private bool _blocking;
     private readonly List<string> _preopens = [];
 
     private void ThrowClosed([CallerMemberName] string name = "")
@@ -34,6 +35,7 @@ public class VirtualFileSystemBuilder
 
         return new VirtualFileSystem(
             _readonly,
+            _blocking,
             clock,
             _stdin ?? new ZeroFile(),
             _stdout ?? new ZeroFile(),
@@ -101,6 +103,13 @@ public class VirtualFileSystemBuilder
     {
         ThrowClosed();
         _readonly = isReadonly;
+        return this;
+    }
+
+    public VirtualFileSystemBuilder Blocking(bool isBlocking)
+    {
+        ThrowClosed();
+        _blocking = isBlocking;
         return this;
     }
 

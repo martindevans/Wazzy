@@ -21,6 +21,7 @@ public sealed class VirtualFileSystem
     private IAsyncCallState? _asyncState;
 
     private readonly bool _readonly;
+    private readonly bool _blocking;
     private readonly IVFSClock _clock;
 
     private readonly IFile _stdin;
@@ -34,9 +35,10 @@ public sealed class VirtualFileSystem
 
     private readonly object _globalLock = new();
 
-    internal VirtualFileSystem(bool @readonly, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens)
+    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens)
     {
         _readonly = @readonly;
+        _blocking = blocking;
         _clock = clock;
         _stdin = stdin;
         _stdout = stdout;
@@ -1122,7 +1124,7 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
-            _asyncState ??= new AsyncCallState<TResult>(create(caller), name);
+            _asyncState ??= new AsyncCallState<TResult>(create(caller), _blocking, name);
 
             var r = ((AsyncCallState<TResult>)_asyncState).Poll(caller, out var @return, name);
             if (r != null && complete != null)
@@ -1149,13 +1151,19 @@ public sealed class VirtualFileSystem
         : IAsyncCallState
         where TResult : class, IAsyncReturn
     {
+        private readonly bool _blocking;
         private readonly string _name;
         private readonly Task<TResult> _work;
 
-        public AsyncCallState(Task<TResult> work, [CallerMemberName] string name = "")
+        public AsyncCallState(Task<TResult> work, bool blocking, [CallerMemberName] string name = "")
         {
+            _blocking = blocking;
             _name = name;
-            _work = Task.Run(async () => await work.ConfigureAwait(false));
+
+            // Give the work a chance to complete immediately
+            _work = work.IsCompleted
+                  ? work
+                  : Task.Run(async () => await work.ConfigureAwait(false));
         }
 
         public void Check([CallerMemberName] string name = "")
@@ -1168,10 +1176,14 @@ public sealed class VirtualFileSystem
         {
             Check(name);
 
+            if (_blocking)
+                _work.Wait();
+
             if (caller.IsAsyncCapable())
             {
                 caller.Resume(out var eState);
 
+                _work.Wait(10);
                 if (!_work.IsCompleted)
                 {
                     caller.Suspend(eState);
