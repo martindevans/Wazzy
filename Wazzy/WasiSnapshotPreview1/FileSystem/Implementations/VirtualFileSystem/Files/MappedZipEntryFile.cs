@@ -9,19 +9,18 @@ public class MappedZipEntryFile
     private class Handle
         : BaseFileHandle<MappedZipEntryFile>
     {
-        private readonly Stream _stream;
+        private readonly MappedZipEntryFile _file;
 
         private long _position;
 
         public Handle(MappedZipEntryFile file, FdFlags flags)
             : base(file, flags)
         {
-            _stream = new MemoryStream(file.GetDecompressedContent());
+            _file = file;
         }
 
         public override void Dispose()
         {
-            _stream.Dispose();
         }
 
         public override ulong Position
@@ -36,7 +35,7 @@ public class MappedZipEntryFile
             }
         }
 
-        public override ulong Size => (ulong)_stream.Length;
+        public override ulong Size => _file.Size;
 
         public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
         {
@@ -53,15 +52,20 @@ public class MappedZipEntryFile
             return 0;
         }
 
-        public override async Task<uint> Read(Memory<byte> bytes, ulong timestamp)
+        public override Task<uint> Read(Memory<byte> bytes, ulong timestamp)
         {
             File.AccessTime = timestamp;
 
-            _stream.Seek((long)Position, SeekOrigin.Begin);
-            var read = await _stream.ReadAsync(bytes);
-            Position += (ulong)read;
+            checked
+            {
+                var content = _file.GetDecompressedContent();
+                var read = Math.Min(Size - Position, (ulong)bytes.Length);
+                content.AsSpan(checked((int)Position), (int)read).CopyTo(bytes.Span);
 
-            return (uint)read;
+                Position += read;
+
+                return Task.FromResult((uint)read);
+            }
         }
 
         public override void Truncate(ulong timestamp, long size)
@@ -83,6 +87,8 @@ public class MappedZipEntryFile
 
     private readonly ZipArchiveEntry _entry;
     private byte[]? _decompressedCache;
+
+    public ulong Size => checked((ulong)_entry.Length);
 
     private byte[] GetDecompressedContent()
     {

@@ -13,6 +13,7 @@ using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Fi
 using Wazzy.WasiSnapshotPreview1.Process;
 using Wazzy.WasiSnapshotPreview1.Random;
 using Exception = System.Exception;
+using System.Runtime.ExceptionServices;
 
 namespace Wazzy.Tests.wasi_testsuite
 {
@@ -25,7 +26,7 @@ namespace Wazzy.Tests.wasi_testsuite
         private readonly string _wasm;
         private readonly JsonSpec _spec;
 
-        public Dictionary<string, string> ExtraEnv = new();
+        public readonly Dictionary<string, string> ExtraEnv = new();
 
         public WasiTestSuiteRunner(string name, bool logOnlyFs)
         {
@@ -93,6 +94,7 @@ namespace Wazzy.Tests.wasi_testsuite
             var instance = helper.Instantiate();
             var start = instance.GetAction("_start")!;
             var exitCode = 0;
+            ExceptionDispatchInfo? except = null;
             try
             {
                 start();
@@ -112,6 +114,8 @@ namespace Wazzy.Tests.wasi_testsuite
             {
                 if (e.GetBaseException() is ThrowExitProcessException ex)
                     exitCode = ex.ExitCode;
+                else
+                    except = ExceptionDispatchInfo.Capture(e);
             }
 
             // Check exit code
@@ -120,6 +124,8 @@ namespace Wazzy.Tests.wasi_testsuite
             // Checks outputs
             Assert.AreEqual(_spec.StdOut, stdout.ToString());
             Assert.AreEqual(_spec.StdErr, stderr.ToString());
+
+            except?.Throw();
         }
 
         private (VirtualFileSystem, StringBuilder, StringBuilder) SetupVfs()
