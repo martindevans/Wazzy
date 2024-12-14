@@ -50,7 +50,7 @@ public class VirtualFileSystemBuilder
         if (fileTree is not null)
         {
             var content = new List<(string, Func<VfsContext, IFilesystemEntry>)>();
-            var builder = new DirectoryBuilder(string.Empty, content);
+            var builder = new DirectoryBuilder("", content);
             fileTree(builder);
 
             var context = new VfsContext { Clock = clock };

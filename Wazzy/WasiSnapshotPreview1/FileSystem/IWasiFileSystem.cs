@@ -1,4 +1,5 @@
-﻿using Wasmtime;
+﻿using System.Text;
+using Wasmtime;
 using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem;
@@ -254,12 +255,7 @@ public interface IWasiFileSystem
 
     public WasiError FdStatSetFlags(Caller caller, FileDescriptor fd, FdFlags flags);
 
-    public WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
-    {
-        // Assume links are not supported, so therefore one doesn't exist
-        nwritten = 0;
-        return WasiError.ENOENT;
-    }
+    public WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten);
 
     public WasiError PathLink(Caller caller, FileDescriptor sourceRootFd, ReadOnlySpan<byte> sourcePath, int lookupFlags, FileDescriptor destRootFd, ReadOnlySpan<byte> destPath)
     {

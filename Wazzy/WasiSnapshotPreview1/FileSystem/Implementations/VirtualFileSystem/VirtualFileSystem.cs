@@ -268,6 +268,24 @@ public sealed class VirtualFileSystem
         return null;
     }
 
+    WasiError IWasiFileSystem.ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
+    {
+        lock (_globalLock)
+        {
+            CheckAsyncState();
+
+            nwritten = 0;
+
+            // Check if the file exists
+            var handle = GetHandle(fd);
+            if (handle == null)
+                return WasiError.EBADF;
+
+            // We don't support links, so if it exists it's invalid to treat it as a link!
+            return WasiError.EINVAL;
+        }
+    }
+
     PrestatGetResult IWasiFileSystem.PrestatGet(Caller caller, FileDescriptor fd, out Prestat result)
     {
         lock (_globalLock)

@@ -167,8 +167,9 @@ public abstract class WriteToOutputFilesystem
         return WasiError.EBADF;
     }
 
-    public WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, ref int nwritten)
+    public WasiError ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
     {
+        nwritten = 0;
         return WasiError.EBADF;
     }
 

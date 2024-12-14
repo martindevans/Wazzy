@@ -8,9 +8,8 @@ public static class CallerExtensions
     {
         if (getter == null)
         {
-            getter = caller.GetFunction("asyncify_get_state")?.WrapFunc<int>();
-            if (getter == null)
-                throw new InvalidOperationException("Cannot `GetAsyncState()` - instance is not async capable");
+            getter = caller.GetFunction("asyncify_get_state")?.WrapFunc<int>()
+                ?? throw new InvalidOperationException("Cannot `GetAsyncState()` - instance is not async capable");
         }
 
         return (AsyncState)getter();
