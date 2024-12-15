@@ -21,6 +21,10 @@ internal class SavedStackData
         Epoch = 0;
     }
 
+    /// <summary>
+    /// Get a new <see cref="SavedStackData"/> from the allocation pool
+    /// </summary>
+    /// <returns></returns>
     public static SavedStackData Get()
     {
         if (_pool.TryTake(out var result))
@@ -32,9 +36,13 @@ internal class SavedStackData
         return new SavedStackData();
     }
 
+    /// <summary>
+    /// Return a <see cref="SavedStackData"/> back to the allocation pool
+    /// </summary>
+    /// <param name="stack"></param>
     public static void Return(SavedStackData stack)
     {
-        // Invalid all handles
+        // Invalidate all handles
         stack.Epoch++;
 
         // Reset

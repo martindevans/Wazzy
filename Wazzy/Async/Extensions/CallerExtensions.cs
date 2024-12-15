@@ -69,7 +69,7 @@ public static class CallerExtensions
     }
 
     /// <summary>
-    /// Allocate a buffer of the given size
+    /// Allocate a buffer of the given size. This will only succeed if the WASM code defines a function: <code>asyncify_malloc_buffer(int size) -> int</code>
     /// </summary>
     /// <param name="caller"></param>
     /// <param name="size"></param>
