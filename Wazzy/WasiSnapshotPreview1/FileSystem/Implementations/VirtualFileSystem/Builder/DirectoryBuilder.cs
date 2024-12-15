@@ -159,10 +159,12 @@ public class DirectoryBuilder
     /// </remarks>
     /// <param name="name"></param>
     /// <param name="hostPath"></param>
+    /// <param name="contentCaching">Set whether or not decompressed file content should be cached in memory after the first read</param>
     /// <returns></returns>
     public DirectoryBuilder MapReadonlyZipArchiveDirectory(
         string name,
-        string hostPath)
+        string hostPath,
+        bool contentCaching = false)
     {
         if (!File.Exists(hostPath))
             throw new ArgumentException($"File {hostPath} does not exist", nameof(hostPath));
@@ -170,7 +172,7 @@ public class DirectoryBuilder
         var path = _fullPath + '/' + ValidatePath(name);
 
         _contentConstructors.Add(
-            (path, context => new MappedZipArchiveDirectoryContent(hostPath, context.Clock))
+            (path, context => new MappedZipArchiveDirectoryContent(hostPath, context.Clock, contentCaching))
         );
 
         return this;

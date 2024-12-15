@@ -56,6 +56,9 @@
     <None Update="Scripts\Simple_Async.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestFolder.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="wasi-testsuite\tests\assemblyscript\testsuite\args_get-multiple-arguments.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

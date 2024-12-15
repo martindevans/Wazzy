@@ -47,9 +47,12 @@ public class MappedZipArchiveDirectoryContent
     public ulong ModificationTime { get; set; }
     public ulong ChangeTime { get; set; }
 
-    public MappedZipArchiveDirectoryContent(string archivePath, IVFSClock clock)
+    private readonly bool _contentCaching;
+
+    public MappedZipArchiveDirectoryContent(string archivePath, IVFSClock clock, bool contentCaching)
         : this(File.OpenRead(archivePath), clock)
     {
+        _contentCaching = contentCaching;
     }
 
     public MappedZipArchiveDirectoryContent(Stream archiveStream, IVFSClock clock)
@@ -225,7 +228,7 @@ public class MappedZipArchiveDirectoryContent
     {
         if (!_fileEntryCache.TryGetValue(entry, out var file))
         {
-            file = new MappedZipEntryFile(this, entry);
+            file = new MappedZipEntryFile(this, entry, _contentCaching);
             _fileEntryCache[entry] = file;
         }
 

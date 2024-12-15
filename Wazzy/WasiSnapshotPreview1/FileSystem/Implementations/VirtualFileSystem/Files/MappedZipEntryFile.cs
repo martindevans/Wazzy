@@ -74,8 +74,9 @@ public class MappedZipEntryFile
         }
     }
 
-    public MappedZipEntryFile(MappedZipArchiveDirectoryContent archive, string fullPath)
+    public MappedZipEntryFile(MappedZipArchiveDirectoryContent archive, string fullPath, bool contentCaching)
     {
+        _contentCaching = contentCaching;
         _entry = archive.GetEntry(fullPath) ?? throw new InvalidOperationException("No such ZipArchive entry");
     }
 
@@ -85,6 +86,7 @@ public class MappedZipEntryFile
     public ulong ModificationTime { get; set; }
     public ulong ChangeTime { get; set; }
 
+    private readonly bool _contentCaching;
     private readonly ZipArchiveEntry _entry;
     private byte[]? _decompressedCache;
 
@@ -92,15 +94,22 @@ public class MappedZipEntryFile
 
     private byte[] GetDecompressedContent()
     {
-        if (_decompressedCache == null)
-        {
-            using var stream = _entry.Open();
-            _decompressedCache = new byte[_entry.Length];
-            var output = new MemoryStream(_decompressedCache);
-            stream.CopyTo(output);
-        }
+        var content = _decompressedCache ?? Decompress();
 
-        return _decompressedCache;
+        if (_contentCaching)
+            _decompressedCache = content;
+
+        return content;
+    }
+
+    private byte[] Decompress()
+    {
+        using var stream = _entry.Open();
+        var content = new byte[_entry.Length];
+        var output = new MemoryStream(content);
+        stream.CopyTo(output);
+
+        return content;
     }
 
     public IFilesystemEntry ToInMemory()
