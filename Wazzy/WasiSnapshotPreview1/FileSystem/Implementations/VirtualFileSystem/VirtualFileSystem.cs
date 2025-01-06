@@ -1201,10 +1201,9 @@ public sealed class VirtualFileSystem
             {
                 caller.Resume(out var eState);
 
-                _work.Wait(10);
                 if (!_work.IsCompleted)
                 {
-                    caller.Suspend(eState);
+                    caller.Suspend(eState, TaskSuspend.Create(_work));
                     @return = (WasiError)ushort.MaxValue;
                     return null;
                 }

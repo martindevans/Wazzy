@@ -15,6 +15,8 @@ internal class SavedStackData
     public object? Locals { get; set; }
     public int ExecutionState { get; set; }
 
+    public IAsyncifySuspendReason? SuspendReason;
+
     private SavedStackData()
     {
         Data = new byte[WasmAsyncExtensions.StashSize];
@@ -49,6 +51,7 @@ internal class SavedStackData
         stack.AllocatedBufferAddress = default;
         stack.Locals = null;
         stack.ExecutionState = 0;
+        stack.SuspendReason = null;
 
         // Add this item to the pool if possible
         if (_pool.Count < MaxPoolSize && stack.Epoch < int.MaxValue - 100)
@@ -68,6 +71,15 @@ public readonly struct SavedStack
     private readonly int _epoch;
 
     internal bool IsNull => Data == null;
+
+    public IAsyncifySuspendReason SuspendReason
+    {
+        get
+        {
+            CheckEpoch();
+            return Data.SuspendReason ?? UnspecifiedSuspend.Instance;
+        }
+    }
 
     /// <summary>
     /// Represents a stack that has been rewound out of a WASM Instance and may be resumed.

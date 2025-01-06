@@ -1,4 +1,5 @@
-﻿using Wasmtime;
+﻿using System.Buffers;
+using Wasmtime;
 using Wazzy.Async.Extensions;
 using Wazzy.Async;
 using Wazzy.WasiSnapshotPreview1.Clock;
@@ -40,29 +41,35 @@ public class AsyncifyPoll
         caller.Resume(out var eState);
 
         // Check if any events happened, if they did return immediately
-        if (CheckEvents(caller, locals, @in, @out, out neventsOut))
+        if (CheckEvents(caller, locals, @in, @out, out neventsOut, out var task))
             return WasiError.SUCCESS;
 
         // Nothing happened! suspend execution
-        caller.Suspend(locals, eState);
+        caller.Suspend(locals, eState, reason: TaskSuspend.Create(task));
         return WasiError.SUCCESS;
     }
 
-    private bool CheckEvents(Caller caller, PollOneoffLocals locals, ReadOnlySpan<WasiSubscription> @in, Span<WasiEvent> @out, out int eventCountOut)
+    private bool CheckEvents(Caller caller, PollOneoffLocals locals, ReadOnlySpan<WasiSubscription> @in, Span<WasiEvent> @out, out int eventCountOut, out Task? task)
     {
         eventCountOut = 0;
 
+        var index = 0;
+        var tasks = ArrayPool<Task>.Shared.Rent(@in.Length);
         var anyEvent = false;
         foreach (var item in @in)
         {
             // Try to get an event for this subscription
+            Task? eventTask = null;
             var @event = item.Union.Tag switch
             {
-                0 => CheckClock(caller, item.Union.GetClock()),
-                1 => CheckRead(item.Union.GetRead()),
-                2 => CheckWrite(item.Union.GetWrite()),
+                0 => CheckClock(caller, item.Union.GetClock(), out eventTask),
+                1 => CheckRead(item.Union.GetRead(), out eventTask),
+                2 => CheckWrite(item.Union.GetWrite(), out eventTask),
                 _ => CheckUnknown(item.Union.Tag)
             };
+
+            if (eventTask != null)
+                tasks[index++] = eventTask;
 
             // Write out the event (if there is one) to the output buffer
             if (@event.HasValue)
@@ -73,14 +80,22 @@ public class AsyncifyPoll
                 anyEvent = true;
             }
         }
+
+        if (index > 0)
+            task = Task.WhenAny(tasks.AsMemory(0, index).ToArray());
+        else
+            task = null;
+        ArrayPool<Task>.Shared.Return(tasks, true);
+
         return anyEvent;
 
-        WasiEvent? CheckClock(Caller caller, SubscriptionClock subscription)
+        WasiEvent? CheckClock(Caller caller, SubscriptionClock subscription, out Task? task)
         {
             // Try to get the current time from the clock
             var err = _clock.TimeGet(caller, subscription.ID, subscription.Precision, out var time);
             if (err != WasiError.SUCCESS)
             {
+                task = null;
                 return new WasiEvent
                 {
                     Error = err,
@@ -92,8 +107,12 @@ public class AsyncifyPoll
             if (subscription.Flags.SubscriptionClockIsAbstime != 0)
             {
                 if (time < subscription.Timestamp)
+                {
+                    task = Task.Delay(TimeSpan.FromMilliseconds((subscription.Timestamp - time) / 1_000_000f));
                     return null;
+                }
 
+                task = null;
                 return new WasiEvent
                 {
                     Error = 0,
@@ -102,9 +121,14 @@ public class AsyncifyPoll
             }
 
             // Check timestamp (relative)
-            if (time < locals.Get(subscription.ID) + subscription.Timestamp)
+            var end = locals.Get(subscription.ID) + subscription.Timestamp;
+            if (time < end)
+            {
+                task = Task.Delay(TimeSpan.FromMilliseconds((end - time) / 1_000_000f));
                 return null;
+            }
 
+            task = null;
             return new WasiEvent
             {
                 Error = 0,
@@ -112,8 +136,9 @@ public class AsyncifyPoll
             };
         }
 
-        WasiEvent? CheckRead(SubscriptionFdReadWrite read)
+        WasiEvent? CheckRead(SubscriptionFdReadWrite read, out Task? task)
         {
+            task = null;
             return null;
 
             //todo: poll CheckRead
@@ -156,8 +181,9 @@ public class AsyncifyPoll
             //};
         }
 
-        WasiEvent? CheckWrite(SubscriptionFdReadWrite write)
+        WasiEvent? CheckWrite(SubscriptionFdReadWrite write, out Task? task)
         {
+            task = null;
             return null;
 
             //todo: poll CheckWrite

@@ -91,7 +91,8 @@ public static class WasmAsyncExtensions
     /// <param name="caller"></param>
     /// <param name="locals">The locals to save, can be restored when resuming with GetSuspendedLocals()</param>
     /// <param name="executionState">The `executionState` that was previously output from `Resume`</param>
-    public static void Suspend<T>(this Caller caller, T locals, int executionState)
+    /// <param name="reason">The reason that suspend is being called</param>
+    public static void Suspend<T>(this Caller caller, T locals, int executionState, IAsyncifySuspendReason? reason = null)
         where T : struct
     {
         // Check state is as expected
@@ -103,6 +104,7 @@ public static class WasmAsyncExtensions
 
         // Allocate state object
         var stash = SavedStackData.Get();
+        stash.SuspendReason = reason ?? UnspecifiedSuspend.Instance;
         _unwindStash.Value = stash;
 
         // Get a buffer, there are two ways to do this:
@@ -132,7 +134,10 @@ public static class WasmAsyncExtensions
         caller.AsyncifyStartUnwind(state.GetRewindStructAddress(), ref getter);
 
         // Save locals in stash
-        stash.Locals = locals;
+        if (typeof(T) == typeof(Empty))
+            stash.Locals = null;
+        else
+            stash.Locals = locals;
     }
 
     /// <summary>
@@ -140,9 +145,10 @@ public static class WasmAsyncExtensions
     /// </summary>
     /// <param name="caller"></param>
     /// <param name="executionState">The `executionState` that was previously output from `Resume`</param>
-    public static void Suspend(this Caller caller, int executionState)
+    /// <param name="reason">The reason that suspend is being called</param>
+    public static void Suspend(this Caller caller, int executionState, IAsyncifySuspendReason? reason = null)
     {
-        Suspend(caller, default(Empty), executionState);
+        Suspend(caller, default(Empty), executionState, reason: reason);
     }
 
     /// <summary>

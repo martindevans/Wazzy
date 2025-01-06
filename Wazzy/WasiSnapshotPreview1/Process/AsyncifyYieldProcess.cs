@@ -20,7 +20,7 @@ public class AsyncifyYieldProcess
         if (caller.GetAsyncState() == AsyncState.Resuming)
             caller.Resume(out _);
         else
-            caller.Suspend(0);
+            caller.Suspend(0, SchedYieldSuspend.Instance);
 
         return WasiError.SUCCESS;
     }
