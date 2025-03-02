@@ -181,7 +181,7 @@ public static class WasmAsyncExtensions
         // Handle buffer cleanup
         if (saved.AllocatedBufferAddress.HasValue)
         {
-            // Free the buffer lent to use by client code
+            // Free the buffer lent to us by client code
             caller.AsyncifyFreeBuffer(saved.AllocatedBufferAddress.Value, StashSize);
         }
         else

@@ -72,6 +72,9 @@ public readonly struct SavedStack
 
     internal bool IsNull => Data == null;
 
+    /// <summary>
+    /// The reason this stack was suspended, cast to one of the subtypes of IAsyncifySuspendReason
+    /// </summary>
     public IAsyncifySuspendReason SuspendReason
     {
         get

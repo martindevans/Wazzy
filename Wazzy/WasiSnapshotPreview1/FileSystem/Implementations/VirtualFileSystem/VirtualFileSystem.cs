@@ -1,7 +1,6 @@
 ﻿using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using Wasmtime;
 using Wazzy.Async;
@@ -24,32 +23,29 @@ public sealed class VirtualFileSystem
     private readonly bool _blocking;
     private readonly IVFSClock _clock;
 
-    private readonly IFile _stdin;
-    private readonly IFile _stdout;
-    private readonly IFile _stderr;
-
     private readonly IDirectory _root;
-    private readonly List<string> _preopens;
     private readonly List<(FileDescriptor, ReadOnlyMemory<byte>)> _preOpened = [];
     private readonly Dictionary<FileDescriptor, IFilesystemHandle> _handles = [];
 
+    private System.Random _fdGenerator;
+
     private readonly object _globalLock = new();
 
-    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens)
+    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens, int? seed = 17)
     {
         _readonly = @readonly;
         _blocking = blocking;
         _clock = clock;
-        _stdin = stdin;
-        _stdout = stdout;
-        _stderr = stderr;
         _root = root;
-        _preopens = preopens;
+
+        _fdGenerator = seed.HasValue
+                     ? new System.Random(seed.Value)
+                     : new System.Random();
 
         // Create handles for default streams
-        _handles.Add(new FileDescriptor(0), _stdin.Open(FdFlags.None));
-        _handles.Add(new FileDescriptor(1), _stdout.Open(FdFlags.Append));
-        _handles.Add(new FileDescriptor(2), _stderr.Open(FdFlags.Append));
+        _handles.Add(new FileDescriptor(0), stdin.Open(FdFlags.None));
+        _handles.Add(new FileDescriptor(1), stdout.Open(FdFlags.Append));
+        _handles.Add(new FileDescriptor(2), stderr.Open(FdFlags.Append));
 
         // Pre-open the root
         var descriptor = new FileDescriptor(3);
@@ -59,7 +55,7 @@ public sealed class VirtualFileSystem
 
         // Additional preopens
         var idx = 4;
-        foreach (var pathStr in _preopens)
+        foreach (var pathStr in preopens)
         {
             var fd = new FileDescriptor(idx++);
             var pathBytes = Encoding.UTF8.GetBytes(pathStr);
@@ -78,13 +74,10 @@ public sealed class VirtualFileSystem
 
     private FileDescriptor? AllocateFd()
     {
-        // Seed an RNG with strong randomness
-        var rng = new System.Random(RandomNumberGenerator.GetInt32(0, int.MaxValue));
-
         // Try to generate some FDs, if we can't find an open one after 1024 samples give up
         for (var i = 0; i < 1024; i++)
         {
-            var fd = new FileDescriptor(rng.Next(110, int.MaxValue));
+            var fd = new FileDescriptor(_fdGenerator.Next(110, int.MaxValue));
             if (!_handles.ContainsKey(fd))
                 return fd;
         }
@@ -347,15 +340,12 @@ public sealed class VirtualFileSystem
         lock (_globalLock)
         {
             CheckAsyncState();
-
-            return PathOpen(caller, fd, lookup, path, openFlags, fdFlags, out outputFd);
+            return PathOpen(fd, path, openFlags, fdFlags, out outputFd);
         }
     }
 
     private PathOpenResult PathOpen(
-        Caller caller,
         FileDescriptor fd,
-        LookupFlags lookup,
         ReadOnlySpan<byte> path,
         OpenFlags openFlags,
         FdFlags fdFlags,
@@ -399,7 +389,7 @@ public sealed class VirtualFileSystem
         if (dest == null)
         {
             if ((openFlags & OpenFlags.Create) == OpenFlags.Create)
-                return PathOpenCreate(caller, directory, path8, openFlags, fdFlags, out outputFd);
+                return PathOpenCreate(directory, path8, openFlags, fdFlags, out outputFd);
 
             return PathOpenResult.NoEntity;
         }
@@ -449,7 +439,7 @@ public sealed class VirtualFileSystem
         return PathOpenResult.BadFileDescriptor;
     }
 
-    private PathOpenResult PathOpenCreate(Caller caller, IDirectoryHandle root, PathUtf8 path, OpenFlags openFlags, FdFlags fdFlags, out FileDescriptor outputFd)
+    private PathOpenResult PathOpenCreate(IDirectoryHandle root, PathUtf8 path, OpenFlags openFlags, FdFlags fdFlags, out FileDescriptor outputFd)
     {
         outputFd = default;
 
@@ -815,7 +805,7 @@ public sealed class VirtualFileSystem
         {
             CheckAsyncState();
 
-            var openResult = PathOpen(caller, fd, lookup, path, OpenFlags.None, FdFlags.None, out var tmpFd);
+            var openResult = PathOpen(fd, path, OpenFlags.None, FdFlags.None, out var tmpFd);
             if (openResult != PathOpenResult.Success)
             {
                 result = default;
