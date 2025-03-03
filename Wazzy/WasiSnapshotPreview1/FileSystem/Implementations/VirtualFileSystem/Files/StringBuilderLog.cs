@@ -39,7 +39,7 @@ public class StringBuilderLog
             throw new NotSupportedException("Cannot truncate StringBuilderLog");
         }
 
-        public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
+        public override Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp)
         {
             File.AccessTime = timestamp;
             File.ModificationTime = timestamp;
@@ -52,17 +52,17 @@ public class StringBuilderLog
                 const int CHUNK_SIZE = 128;
                 if (bytes.Length < CHUNK_SIZE)
                 {
-                    bytesWritten += WriteBytes(bytes);
+                    bytesWritten += WriteBytes(bytes.Span);
                     break;
                 }
 
-                var chunk = bytes[..CHUNK_SIZE];
+                var chunk = bytes[..CHUNK_SIZE].Span;
                 bytesWritten += WriteBytes(chunk);
 
                 bytes = bytes[CHUNK_SIZE..];
             }
 
-            return bytesWritten;
+            return Task.FromResult(bytesWritten);
         }
 
         private uint WriteBytes(ReadOnlySpan<byte> bytes)

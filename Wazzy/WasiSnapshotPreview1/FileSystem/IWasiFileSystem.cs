@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Wasmtime;
+﻿using Wasmtime;
 using Wazzy.Interop;
 
 namespace Wazzy.WasiSnapshotPreview1.FileSystem;
@@ -83,9 +82,9 @@ public interface IWasiFileSystem
     /// <param name="caller">Context for this call</param>
     /// <param name="fd">File descriptor to write to</param>
     /// <param name="iovs">set of buffers to write</param>
-    /// <param name="nwritten">total number of bytes written</param>
+    /// <param name="nwrittenPtr">total number of bytes written</param>
     /// <returns></returns>
-    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten);
+    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, Pointer<uint> nwrittenPtr);
 
     /// <summary>
     /// Write to a given file descriptor without updating the offset
@@ -96,7 +95,7 @@ public interface IWasiFileSystem
     /// <param name="offset"></param>
     /// <param name="nwrittenOutput"></param>
     /// <returns></returns>
-    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nwrittenOutput);
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nwrittenPtr);
 
     /// <summary>
     /// Get a "FileStat" object for the given file descriptor
@@ -487,7 +486,7 @@ public interface IWasiFileSystem
                 c,
                 new FileDescriptor(fd),
                 new ReadonlyBuffer<ReadonlyBuffer<byte>>(iovsAddr, (uint)iovsCount),
-                out new Pointer<uint>(nwrittenAddr).Deref(c)
+                new Pointer<uint>(nwrittenAddr)
             )
         );
 
@@ -497,7 +496,7 @@ public interface IWasiFileSystem
                 new FileDescriptor(fd),
                 new ReadonlyBuffer<ReadonlyBuffer<byte>>(iovsAddr, (uint)iovsCount),
                 offset,
-                out new Pointer<uint>(nwrittenAddr).Deref(c)
+                new Pointer<uint>(nwrittenAddr)
             )
         );
 

@@ -1,7 +1,4 @@
-﻿using Wasmtime;
-using Wazzy.Interop;
-
-namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
+﻿namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
 
 /// <summary>
 /// Base interface for a handle to an open file
@@ -35,7 +32,7 @@ public interface IFileHandle
     /// <param name="bytes">Bytes to write</param>
     /// <param name="timestamp">Timestamp of "now", used to update file metadata</param>
     /// <returns>Count of written bytes</returns>
-    uint Write(ReadOnlySpan<byte> bytes, ulong timestamp);
+    Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp);
 
     /// <summary>
     /// Read bytes from the file into the buffer
@@ -114,31 +111,6 @@ public interface IFileHandle
     ulong PollReadableBytes();
 
     ulong PollWritableBytes();
-
-    /// <summary>
-    /// Write all of the iovs one by one
-    /// </summary>
-    /// <param name="caller"></param>
-    /// <param name="iovs"></param>
-    /// <param name="timestamp"></param>
-    /// <returns>bytes written</returns>
-    uint Write(Caller caller, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, ulong timestamp)
-    {
-        var nwrittenOutput = 0u;
-
-        var iovecs = iovs.GetSpan(caller);
-        for (var i = 0; i < iovecs.Length; i++)
-        {
-            var span = iovecs[i].GetSpan(caller);
-            var written = Write(span, timestamp);
-            nwrittenOutput += written;
-
-            if (written != span.Length)
-                break;
-        }
-
-        return nwrittenOutput;
-    }
 }
 
 public abstract class BaseFileHandle<T>
@@ -192,7 +164,7 @@ public abstract class BaseFileHandle<T>
 
     public abstract void Truncate(ulong timestamp, long size);
 
-    public abstract uint Write(ReadOnlySpan<byte> bytes, ulong timestamp);
+    public abstract Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp);
 
     public abstract void Dispose();
 

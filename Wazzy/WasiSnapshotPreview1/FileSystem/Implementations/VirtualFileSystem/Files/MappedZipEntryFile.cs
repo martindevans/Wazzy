@@ -37,7 +37,7 @@ public class MappedZipEntryFile
 
         public override ulong Size => _file.Size;
 
-        public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
+        public override Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp)
         {
             throw new NotSupportedException();
         }

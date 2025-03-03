@@ -62,11 +62,13 @@ internal class MappedFile
             }
         }
 
-        public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
+        public override async Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp)
         {
-            _stream.Write(bytes);
+            await _stream.WriteAsync(bytes);
+
             if (_flushWrites)
-                _stream.Flush();
+                await _stream.FlushAsync();
+
             return (uint)bytes.Length;
         }
 

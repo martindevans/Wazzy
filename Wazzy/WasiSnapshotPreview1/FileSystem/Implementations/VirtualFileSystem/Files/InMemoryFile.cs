@@ -49,7 +49,7 @@ public class InMemoryFile
             return Task.FromResult((uint)read);
         }
 
-        public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
+        public override Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp)
         {
             TryWrite(timestamp);
 
@@ -57,12 +57,12 @@ public class InMemoryFile
                 _position = File._memory.Length;
 
             File._memory.Seek(_position, SeekOrigin.Begin);
-            File._memory.Write(bytes);
+            File._memory.Write(bytes.Span);
 
             var written = bytes.Length;
             _position += written;
 
-            return (uint)written;
+            return Task.FromResult((uint)written);
         }
 
         private void TryRead(ulong timestamp)

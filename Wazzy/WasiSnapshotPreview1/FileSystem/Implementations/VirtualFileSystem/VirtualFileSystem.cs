@@ -27,20 +27,17 @@ public sealed class VirtualFileSystem
     private readonly List<(FileDescriptor, ReadOnlyMemory<byte>)> _preOpened = [];
     private readonly Dictionary<FileDescriptor, IFilesystemHandle> _handles = [];
 
-    private System.Random _fdGenerator;
+    private readonly System.Random _fdGenerator;
 
     private readonly object _globalLock = new();
 
-    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens, int? seed = 17)
+    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens, int seed)
     {
         _readonly = @readonly;
         _blocking = blocking;
         _clock = clock;
         _root = root;
-
-        _fdGenerator = seed.HasValue
-                     ? new System.Random(seed.Value)
-                     : new System.Random();
+        _fdGenerator = new System.Random(seed);
 
         // Create handles for default streams
         _handles.Add(new FileDescriptor(0), stdin.Open(FdFlags.None));
@@ -464,11 +461,7 @@ public sealed class VirtualFileSystem
 
             // All filesystem content must be either a directory or a file!
             if (item.Value.Content is not IFile file)
-            {
-                //todo: Console.Error.WriteLine($"Unknown VirtualFileSystem item type: {item.Value.Content.GetType().Name}");
-
                 return PathOpenResult.InvalidParameter;
-            }
 
             // Fail if it was requested in exclusive mode
             if ((openFlags & OpenFlags.Exclusive) == OpenFlags.Exclusive)
@@ -624,61 +617,69 @@ public sealed class VirtualFileSystem
     }
 
     #region write
-    private WasiError FileWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten, long seek, Whence whence, bool restorePosition)
+    private WasiError FileWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, Pointer<uint> nwrittenPtr, long seek, Whence whence, bool restorePosition)
     {
         lock (_globalLock)
         {
-            CheckAsyncState();
+            // Rent an array and copy data into it
+            var totalDataLength = checked((int)iovs.TotalLength(caller));
+            var dataArr = ArrayPool<byte>.Shared.Rent(totalDataLength);
+            var data = iovs.Flatten(caller, dataArr);
 
-            var handle = GetHandle(fd);
-            if (handle == null)
-            {
-                nwritten = 0;
-                return WasiError.EBADF;
-            }
-
-            if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
-            {
-                nwritten = 0;
-                return WasiError.EISDIR;
-            }
-
-            if (!fileHandle.File.IsWritable)
-            {
-                nwritten = 0;
-                return WasiError.SUCCESS;
-            }
-
-            // Save the current position
-            var saveOffset = fileHandle.Position;
-
-            // Seek to the offset
-            var seekResult = fileHandle.Seek(seek, whence, out _);
-            if (seekResult != SeekResult.Success)
-            {
-                nwritten = 0;
-                return (WasiError)seekResult;
-            }
-
-            // Write the data
-            nwritten = fileHandle.Write(caller, iovs, GetTimestamp());
-
-            // Return to the saved offset
-            if (restorePosition)
-                fileHandle.Seek((long)saveOffset, Whence.Set, out _);
-
-            return WasiError.SUCCESS;
+            return PollAsync(
+                caller,
+                _ => CoCreateWriteTask(fd, data, seek, whence, restorePosition),
+                (caller, result) =>
+                {
+                    nwrittenPtr.Deref(caller) = result.NWritten;
+                    ArrayPool<byte>.Shared.Return(dataArr, true);
+                }
+            );
         }
     }
 
-    WasiError IWasiFileSystem.Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten)
+    private record WriteResultData(WasiError ReturnCode, uint NWritten) : IAsyncReturn;
+
+    private async Task<WriteResultData> CoCreateWriteTask(FileDescriptor fd, ReadOnlyMemory<byte> data, long seek, Whence whence, bool restorePosition)
     {
-        return FileWrite(caller, fd, iovs, out nwritten, 0, Whence.Current, false);
+        CheckAsyncState();
+
+        var handle = GetHandle(fd);
+        if (handle == null)
+            return new WriteResultData(WasiError.EBADF, 0);
+
+        if (handle.FileType == FileType.Directory || handle is not IFileHandle fileHandle)
+            return new WriteResultData(WasiError.EISDIR, 0);
+
+        if (!fileHandle.File.IsWritable)
+            return new WriteResultData(WasiError.SUCCESS, 0);
+
+        // Save the current position
+        var saveOffset = fileHandle.Position;
+
+        // Seek to the offset
+        var seekResult = fileHandle.Seek(seek, whence, out _);
+        if (seekResult != SeekResult.Success)
+            return new WriteResultData((WasiError)seekResult, 0);
+
+        // Write the data
+        var written = await fileHandle.Write(data, GetTimestamp());
+
+        // Return to the saved offset
+        if (restorePosition)
+            fileHandle.Seek((long)saveOffset, Whence.Set, out _);
+
+        return new WriteResultData(WasiError.SUCCESS, written);
     }
 
-    WasiError IWasiFileSystem.PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nwritten)
+    WasiError IWasiFileSystem.Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, Pointer<uint> nwrittenPtr)
     {
-        return FileWrite(caller, fd, iovs, out nwritten, offset, Whence.Set, true);
+        return FileWrite(caller, fd, iovs, nwrittenPtr, 0, Whence.Current, false);
+    }
+
+    WasiError IWasiFileSystem.PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nwrittenPtr)
+    {
+        return FileWrite(caller, fd, iovs, nwrittenPtr, offset, Whence.Set, true);
     }
     #endregion
 
@@ -828,9 +829,9 @@ public sealed class VirtualFileSystem
     {
         lock (_globalLock)
         {
-            return (ReadResult)PollAsync<ReadResultData>(
+            return (ReadResult)PollAsync(
                 caller,
-                caller => CoCreateReadTask(fd, GetTotalIovsBufferLength(caller, iovs), null),
+                caller => CoCreateReadTask(fd, checked((int)iovs.TotalLength(caller)), null),
                 (caller, result) =>
                 {
                     nreadPtr.Deref(caller) = result.NRead;
@@ -851,7 +852,7 @@ public sealed class VirtualFileSystem
         {
             return (ReadResult)PollAsync(
                 caller,
-                caller => CoCreateReadTask(fd, GetTotalIovsBufferLength(caller, iovs), offset),
+                caller => CoCreateReadTask(fd, checked((int)iovs.TotalLength(caller)), offset),
                 (caller, result) =>
                 {
                     nreadPtr.Deref(caller) = result.NRead;
@@ -902,17 +903,6 @@ public sealed class VirtualFileSystem
             fileHandle.Seek((long)savedOffset, Whence.Set, out _);
 
         return new ReadResultData((WasiError)ReadResult.Success, nread, tempBuffer);
-    }
-
-    private static int GetTotalIovsBufferLength(Caller caller, Buffer<Buffer<byte>> iovs)
-    {
-        var total = 0;
-
-        var iovsSpan = iovs.GetSpan(caller);
-        for (var i = 0; i < iovsSpan.Length; i++)
-            total += checked((int)iovsSpan[i].Length);
-
-        return total;
     }
 
     private static void CopyFlatBufferToIovsBuffer(ReadOnlySpan<byte> data, Caller caller, Buffer<Buffer<byte>> iovs)

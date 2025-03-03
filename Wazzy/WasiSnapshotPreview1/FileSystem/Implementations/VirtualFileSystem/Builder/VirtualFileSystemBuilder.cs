@@ -18,6 +18,7 @@ public class VirtualFileSystemBuilder
     private bool _readonly;
     private bool _blocking;
     private readonly List<string> _preopens = [];
+    private int _seed = 17;
 
     private void ThrowClosed([CallerMemberName] string name = "")
     {
@@ -41,7 +42,8 @@ public class VirtualFileSystemBuilder
             _stdout ?? new ZeroFile(),
             _stderr ?? new ZeroFile(),
             root,
-            _preopens
+            _preopens,
+            _seed
         );
     }
 
@@ -116,6 +118,12 @@ public class VirtualFileSystemBuilder
     internal VirtualFileSystemBuilder WithPreopen(string path)
     {
         _preopens.Add(path);
+        return this;
+    }
+
+    public VirtualFileSystemBuilder Seed(int seed)
+    {
+        _seed = seed;
         return this;
     }
 }

@@ -42,13 +42,13 @@ public class ConsoleLog
             throw new NotSupportedException("Cannot truncate ConsoleLog");
         }
 
-        public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
+        public override Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp)
         {
             File.AccessTime = timestamp;
             File.ModificationTime = timestamp;
             File.ChangeTime = timestamp;
 
-            _builder.AddRange(bytes);
+            _builder.AddRange(bytes.Span);
 
             if (_builder.Count >= File._maxBufferSize)
             {
@@ -67,7 +67,7 @@ public class ConsoleLog
                 }
             }
 
-            return (uint)bytes.Length;
+            return Task.FromResult((uint)bytes.Length);
         }
 
         private void WriteToLog(int count)

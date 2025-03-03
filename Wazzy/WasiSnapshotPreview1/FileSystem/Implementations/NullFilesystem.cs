@@ -9,9 +9,9 @@ namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations;
 public class NullFilesystem
     : IWasiFileSystem
 {
-    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten)
+    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, Pointer<uint> nwritten)
     {
-        nwritten = 0;
+        nwritten.Deref(caller) = 0;
 
         // Check if it's stdout or stderr
         if (fd.Handle != 1 && fd.Handle != 2)
@@ -22,7 +22,7 @@ public class NullFilesystem
         for (var i = 0; i < iovecs.Length; i++)
         {
             var span = iovecs[i].GetSpan(caller);
-            nwritten += (uint)span.Length;
+            nwritten.Deref(caller) += (uint)span.Length;
         }
 
         // Done
@@ -62,9 +62,9 @@ public class NullFilesystem
         return WasiError.EBADF;
     }
 
-    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nread)
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nwritten)
     {
-        nread = 0;
+        nwritten.Deref(caller) = 0;
         return WasiError.EBADF;
     }
 

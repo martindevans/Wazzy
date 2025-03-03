@@ -36,10 +36,10 @@ public class ZeroFile
             TryWrite(timestamp);
         }
 
-        public override uint Write(ReadOnlySpan<byte> bytes, ulong timestamp)
+        public override Task<uint> Write(ReadOnlyMemory<byte> bytes, ulong timestamp)
         {
             TryWrite(timestamp);
-            return (uint)bytes.Length;
+            return Task.FromResult((uint)bytes.Length);
         }
 
         private void TryRead(ulong timestamp)

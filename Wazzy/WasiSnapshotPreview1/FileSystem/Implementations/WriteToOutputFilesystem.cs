@@ -14,9 +14,9 @@ public abstract class WriteToOutputFilesystem
 
     protected abstract void StdErr(string message);
 
-    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, out uint nwritten)
+    public WasiError Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, Pointer<uint> nwritten)
     {
-        nwritten = 0;
+        nwritten.Deref(caller) = 0;
 
         // Check if it's stdout or stderr
         if (fd.Handle != 1 && fd.Handle != 2)
@@ -30,7 +30,7 @@ public abstract class WriteToOutputFilesystem
             var span = iovecs[i].GetSpan(caller);
 
             builder.Append(Encoding.UTF8.GetString(span));
-            nwritten += (uint)span.Length;
+            nwritten.Deref(caller) += (uint)span.Length;
         }
 
         // Log it
@@ -76,9 +76,9 @@ public abstract class WriteToOutputFilesystem
         return WasiError.EBADF;
     }
 
-    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, out uint nread)
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nread)
     {
-        nread = 0;
+        nread.Deref(caller) = 0;
         return WasiError.EBADF;
     }
 

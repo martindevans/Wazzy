@@ -54,3 +54,38 @@ public readonly struct Buffer<T>
         return GetSpan(caller.GetMemory("memory")!);
     }
 }
+
+internal static class BufferExtensions
+{
+    public static uint TotalLength<T>(this Buffer<Buffer<T>> buffers, Caller caller)
+        where T : unmanaged
+    {
+        var length = 0u;
+        foreach (var inner in buffers.GetSpan(caller))
+            length += inner.Length;
+        return length;
+    }
+
+    public static uint TotalLength<T>(this ReadonlyBuffer<ReadonlyBuffer<T>> buffers, Caller caller)
+        where T : unmanaged
+    {
+        var length = 0u;
+        foreach (var inner in buffers.GetSpan(caller))
+            length += inner.Length;
+        return length;
+    }
+
+    public static Memory<T> Flatten<T>(this ReadonlyBuffer<ReadonlyBuffer<T>> buffers, Caller caller, T[] dest)
+        where T : unmanaged
+    {
+        var ptr = 0;
+        foreach (var buffer in buffers.GetSpan(caller))
+        {
+            var inner = buffer.GetSpan(caller);
+            inner.CopyTo(dest.AsSpan(ptr));
+            ptr += inner.Length;
+        }
+
+        return dest.AsMemory(0, ptr);
+    }
+}
