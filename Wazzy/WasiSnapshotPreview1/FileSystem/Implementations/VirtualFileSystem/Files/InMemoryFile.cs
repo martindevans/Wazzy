@@ -15,9 +15,9 @@ public class InMemoryFile
             get => (ulong)_position;
             set
             {
+                // Grow to ensure we can seek to this position
                 if (value > Size)
-                    throw new InvalidOperationException("Position cannot be beyond the end of the file");
-
+                    File._memory.SetLength((long)value);
                 _position = (long)value;
             }
         }
