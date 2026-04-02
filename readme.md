@@ -13,8 +13,9 @@ environment.SetEnvironmentVariable("foo", "bar");
 
 var clock = new RealtimeClock();
 
-var linker = new Linker(_engine);
-linker.DefineFeature(new RealtimeClock());
+var engine = new Engine();
+var linker = new Linker(engine);
+linker.DefineFeature(clock);
 linker.DefineFeature(new SeededRandomSource(123));
 linker.DefineFeature(environment);
 linker.DefineFeature(new ThrowExitProcess());
