@@ -3,7 +3,7 @@ using Wazzy.WasiSnapshotPreview1.Environment;
 namespace Wazzy.Tests;
 
 [TestClass]
-public class EnvironmentTests
+public sealed class EnvironmentTests
     : IDisposable
 {
     private readonly WasmTestHelper _helper = new("Scripts/GetEnv.wat");
@@ -52,10 +52,10 @@ public class EnvironmentTests
 
         // Check that the data is what it should be
         var foo = memory.ReadNullTerminatedString(128);
-        Assert.AreEqual(foo, "FOO=bar");
+        Assert.AreEqual("FOO=bar", foo);
 
         var bash = memory.ReadNullTerminatedString(136);
-        Assert.AreEqual(bash, "BASH=BAZ");
+        Assert.AreEqual("BASH=BAZ", bash);
     }
 
     [TestMethod]
@@ -92,10 +92,10 @@ public class EnvironmentTests
 
         // Check that the data is what it should be
         var foo = memory.ReadNullTerminatedString(128);
-        Assert.AreEqual(foo, "--foo");
+        Assert.AreEqual("--foo", foo);
         var bar = memory.ReadNullTerminatedString(134);
-        Assert.AreEqual(bar, "--bar");
+        Assert.AreEqual("--bar", bar);
         var bash = memory.ReadNullTerminatedString(140);
-        Assert.AreEqual(bash, "--bash=baz");
+        Assert.AreEqual("--bash=baz", bash);
     }
 }

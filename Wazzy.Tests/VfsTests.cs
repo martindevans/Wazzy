@@ -10,7 +10,7 @@ public class VfsTests
     [TestMethod]
     public void MapDirectory()
     {
-        Assert.ThrowsException<ArgumentException>(() =>
+        Assert.Throws<ArgumentException>(() =>
         {
             new VirtualFileSystemBuilder()
                 .WithVirtualRoot(builder => { builder.MapDirectory("", ".", true); })

@@ -142,7 +142,7 @@ public sealed class ClockTests
         var clock = new ManualClock(DateTime.UnixEpoch, TimeSpan.FromMilliseconds(1));
         _helper.AddWasiFeature(clock);
 
-        Assert.ThrowsException<ArgumentException>(() =>
+        Assert.Throws<ArgumentException>(() =>
         {
             clock.Tick(TimeSpan.FromDays(-1));
         });

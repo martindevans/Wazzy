@@ -10,7 +10,7 @@ public sealed class BufferedAsyncYieldTests
 {
     private readonly WasmTestHelper _helper = new("Scripts/SimpleWithBuffer_Async.wasm");
 
-    private readonly List<(int, string)> _printCalls = new();
+    private readonly List<(int, string)> _printCalls = [ ];
 
     [TestInitialize]
     public void Init()
@@ -134,7 +134,7 @@ public sealed class BufferedAsyncYieldTests
         var instance = _helper.Instantiate();
 
         // illegal in current state
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
         {
             instance.StopUnwind();
         });
@@ -145,7 +145,7 @@ public sealed class BufferedAsyncYieldTests
     {
         var instance = _helper.Instantiate();
 
-        Assert.ThrowsException<ArgumentException>(() =>
+        Assert.Throws<ArgumentException>(() =>
         {
             instance.StartRewind(default);
         });
@@ -167,7 +167,7 @@ public sealed class BufferedAsyncYieldTests
         instance.StopUnwind();
 
         // Resume again, using the wrong stack
-        Assert.ThrowsException<ObjectDisposedException>(() =>
+        Assert.Throws<ObjectDisposedException>(() =>
         {
             instance.StartRewind(stack);
         });
@@ -216,17 +216,11 @@ public sealed class BufferedAsyncYieldTests
         instance.StartRewind(stack);
 
         // Now this should throw
-        try
-        {
+        var ex = Assert.Throws<WasmtimeException>(() => {
             call(default);
-        }
-        catch (WasmtimeException ex)
-        {
-            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidCastException));
-            return;
-        }
+        });
 
-        Assert.Fail();
+        Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidCastException));
     }
 
     [TestMethod]

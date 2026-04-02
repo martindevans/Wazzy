@@ -10,7 +10,7 @@ public sealed class AsyncYieldTests
 {
     private readonly WasmTestHelper _helper = new("Scripts/Simple_Async.wasm");
 
-    private readonly List<(int, string)> _printCalls = new();
+    private readonly List<(int, string)> _printCalls = [ ];
 
     [TestInitialize]
     public void Init()
@@ -150,7 +150,7 @@ public sealed class AsyncYieldTests
         var instance = _helper.Instantiate();
 
         // illegal in current state
-        Assert.ThrowsException<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
         {
             instance.StopUnwind();
         });
@@ -161,7 +161,7 @@ public sealed class AsyncYieldTests
     {
         var instance = _helper.Instantiate();
 
-        Assert.ThrowsException<ArgumentException>(() =>
+        Assert.Throws<ArgumentException>(() =>
         {
             instance.StartRewind(default);
         });
@@ -183,7 +183,7 @@ public sealed class AsyncYieldTests
         instance.StopUnwind();
 
         // Resume again, using the wrong stack
-        Assert.ThrowsException<ObjectDisposedException>(() =>
+        Assert.Throws<ObjectDisposedException>(() =>
         {
             instance.StartRewind(stack);
         });
@@ -192,7 +192,7 @@ public sealed class AsyncYieldTests
     [TestMethod]
     public void IllegalIncorrectLocalsType()
     {
-        //Redefine "print" to get a `long` the first time it is suspended, then save a `long`, then next time it tries to load an `int`
+        // Redefine "print" to get a `long` the first time it is suspended, then save a `long`, then next time it tries to load an `int`
         var counter = 0;
         _helper.Linker.DefineFunction("spectest", "print", (Caller call, int _) =>
         {
@@ -232,17 +232,12 @@ public sealed class AsyncYieldTests
         instance.StartRewind(stack);
 
         // Now this should throw
-        try
+        var ex = Assert.Throws<WasmtimeException>(() =>
         {
             call(default);
-        }
-        catch (WasmtimeException ex)
-        {
-            Assert.IsInstanceOfType(ex.InnerException, typeof(InvalidCastException));
-            return;
-        }
+        });
 
-        Assert.Fail();
+        Assert.IsInstanceOfType<InvalidCastException>(ex.InnerException);
     }
 
     [TestMethod]
@@ -275,19 +270,14 @@ public sealed class AsyncYieldTests
         instance.StartRewind(stack);
 
         // Now this should throw
-        try
+        var ex = Assert.Throws<WasmtimeException>(() =>
         {
             call(default);
-        }
-        catch (WasmtimeException ex)
-        {
-            Assert.IsInstanceOfType(ex.InnerException, typeof(BadExecutionStateException));
-            var bad = (BadExecutionStateException)ex.InnerException;
-            Assert.AreEqual(11, bad.ExecutionState);
-            Assert.AreEqual("spectest.print", bad.MethodName);
-            return;
-        }
+        });
 
-        Assert.Fail();
+        Assert.IsInstanceOfType(ex.InnerException, typeof(BadExecutionStateException));
+        var bad = (BadExecutionStateException)ex.InnerException;
+        Assert.AreEqual(11, bad.ExecutionState);
+        Assert.AreEqual("spectest.print", bad.MethodName);
     }
 }

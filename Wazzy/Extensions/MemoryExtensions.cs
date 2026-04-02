@@ -4,7 +4,7 @@ namespace Wazzy.Extensions;
 
 internal static class MemoryExtensions
 {
-    private static void GrowToByteSize(this Memory memory, long finalBytesSize)
+    internal static void GrowToByteSize(this Memory memory, long finalBytesSize)
     {
         // Ensure memory has at least 1 page!
         var currentBytesSize = memory.GetLength();
