@@ -40,11 +40,31 @@ public static class CallerExtensions
             && caller.GetFunction("asyncify_get_state") != null;
     }
 
-    internal static Memory GetDefaultMemory(this Caller caller)
+    /// <summary>
+    /// Get memory to use for asyncify data.
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <param name="dedicated">Indicates if the special `asyncify_unwind_stack_memory_heap` dedicated memory was found (multi memory). If so
+    /// then this memory is only used for asyncify work and can be freely used without worrying about other data stored in it.</param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    internal static Memory GetAsyncifyMemory(this Caller caller, out bool dedicated)
     {
-        // Get memory, it should always be called "memory" (by convention)
-        return caller.GetMemory("memory")
-            ?? throw new InvalidOperationException("Cannot get exported memory");
+        var mem = caller.GetMemory("asyncify_unwind_stack_memory_heap");
+        if (mem != null)
+        {
+            dedicated = true;
+            return mem;
+        }
+
+        mem = caller.GetMemory("memory");
+        if (mem != null)
+        {
+            dedicated = false;
+            return mem;
+        }
+
+        throw new InvalidOperationException("Cannot get exported memory");
     }
 
     internal static void AsyncifyStartUnwind(this Caller caller, int addr, ref Func<int>? getter)

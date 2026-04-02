@@ -28,7 +28,7 @@ public sealed class InteropTests
     {
         var instance = _helper.Instantiate();
 
-        Assert.ThrowsException<InvalidOperationException>(() => instance.GetAsyncState());
+        Assert.Throws<InvalidOperationException>(() => instance.GetAsyncState());
     }
 
     [TestMethod]

@@ -12,8 +12,8 @@ public class SpanExtensionsTests
 
         span.Split('c', out var left, out var right);
 
-        Assert.AreEqual(string.Join("", left.ToArray()), "ab");
-        Assert.AreEqual(string.Join("", right.ToArray()), "dabcd");
+        Assert.AreEqual("ab", string.Join("", left.ToArray()));
+        Assert.AreEqual("dabcd", string.Join("", right.ToArray()));
     }
 
     [TestMethod]
@@ -23,8 +23,8 @@ public class SpanExtensionsTests
 
         span.Split('e', out var left, out var right);
 
-        Assert.AreEqual(string.Join("", left.ToArray()), "abcdabcd");
-        Assert.AreEqual(string.Join("", right.ToArray()), "");
+        Assert.AreEqual("abcdabcd", string.Join("", left.ToArray()));
+        Assert.AreEqual("", string.Join("", right.ToArray()));
     }
 
     [TestMethod]
@@ -34,8 +34,8 @@ public class SpanExtensionsTests
 
         span.SplitLast('c', out var left, out var right);
 
-        Assert.AreEqual(string.Join("", left.ToArray()), "abcdab");
-        Assert.AreEqual(string.Join("", right.ToArray()), "d");
+        Assert.AreEqual("abcdab", string.Join("", left.ToArray()));
+        Assert.AreEqual("d", string.Join("", right.ToArray()));
     }
 
     [TestMethod]
@@ -45,7 +45,7 @@ public class SpanExtensionsTests
 
         span.SplitLast('e', out var left, out var right);
 
-        Assert.AreEqual(string.Join("", left.ToArray()), "abcdabcd");
-        Assert.AreEqual(string.Join("", right.ToArray()), "");
+        Assert.AreEqual("abcdabcd", string.Join("", left.ToArray()));
+        Assert.AreEqual("", string.Join("", right.ToArray()));
     }
 }

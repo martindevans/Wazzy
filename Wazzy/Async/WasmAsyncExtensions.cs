@@ -100,28 +100,38 @@ public static class WasmAsyncExtensions
         caller.GetAsyncState(ref getter).AssertState(AsyncState.None);
 
         // Get some things we need
-        var memory = caller.GetDefaultMemory();
+        var memory = caller.GetAsyncifyMemory(out var dedicatedAsyncMemory);
 
         // Allocate state object
         var stash = SavedStackData.Get();
         stash.SuspendReason = reason ?? UnspecifiedSuspend.Instance;
         _unwindStash.Value = stash;
 
-        // Get a buffer, there are two ways to do this:
+        // Get a buffer, there are three ways to do this:
+        // - If we have dedicated async memory, just use address 0
         // - Ask the wasm code to malloc a buffer
         // - Failing that, copy out the first chunk of memory to a temporary stash, and use that space for unwinding
-        var allocated = caller.AsyncifyMallocBuffer(StashSize);
+
         AsyncMemoryState state;
-        if (allocated.HasValue)
+        if (dedicatedAsyncMemory)
         {
-            state = new AsyncMemoryState(allocated.Value, StashSize);
-            stash.AllocatedBufferAddress = allocated;
+            memory.GrowToByteSize(StashSize);
+            state = new AsyncMemoryState(0, StashSize);
         }
         else
         {
-            // No buffer could be allocated, read out memory into stash so we can use that
-            memory.ReadMemory(stash.Data);
-            state = new AsyncMemoryState(0, StashSize);
+            var allocated = caller.AsyncifyMallocBuffer(StashSize);
+            if (allocated.HasValue)
+            {
+                state = new AsyncMemoryState(allocated.Value, StashSize);
+                stash.AllocatedBufferAddress = allocated;
+            }
+            else
+            {
+                // No buffer could be allocated, read out memory into stash so we can use that
+                memory.ReadMemory(stash.Data);
+                state = new AsyncMemoryState(0, StashSize);
+            }
         }
 
         // Write the execution state number
@@ -179,17 +189,26 @@ public static class WasmAsyncExtensions
         caller.AsyncifyStopRewind(ref getter);
 
         // Handle buffer cleanup
-        if (saved.AllocatedBufferAddress.HasValue)
+        var memory = caller.GetAsyncifyMemory(out var dedicatedAsyncMemory);
+
+        if (dedicatedAsyncMemory)
         {
-            // Free the buffer lent to us by client code
-            caller.AsyncifyFreeBuffer(saved.AllocatedBufferAddress.Value, StashSize);
+            // No cleanup necessary!
         }
         else
         {
-            // Restore the stashed memory we copied out
-            var memory = caller.GetDefaultMemory();
-            memory.WriteMemory(saved.Data);
+            if (saved.AllocatedBufferAddress.HasValue)
+            {
+                // Free the buffer lent to us by client code
+                caller.AsyncifyFreeBuffer(saved.AllocatedBufferAddress.Value, StashSize);
+            }
+            else
+            {
+                // Restore the stashed memory we copied out
+                memory.WriteMemory(saved.Data);
+            }
         }
+
         SavedStackData.Return(saved);
 
         return executionState;
