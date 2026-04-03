@@ -96,11 +96,28 @@ public static class CallerExtensions
     /// <returns></returns>
     internal static int? AsyncifyMallocBuffer(this Caller caller, int size)
     {
-        var ptr = caller.GetFunction("asyncify_malloc_buffer")?.WrapFunc<int, int>()?.Invoke(size) ?? -1;
-        if (ptr < 0)
-            return null;
+        // Check if the special purpose malloc exists and use it
+        var async_mallocs = caller.GetAsyncifyMalloc();
+        if (async_mallocs is (var async_malloc, not null))
+        {
+            var ptr = async_malloc(size);
+            if (ptr < 0)
+                return null;
+            return ptr;
+        }
 
-        return ptr;
+        // Try to use general purpose malloc
+        var mallocs = caller.GetMalloc();
+        if (mallocs is (var malloc, not null))
+        {
+            var ptr = malloc(size);
+            if (ptr <= 0)
+                return null;
+            return ptr;
+        }
+
+        // No malloc available
+        return null;
     }
 
     /// <summary>
@@ -111,6 +128,50 @@ public static class CallerExtensions
     /// <param name="size"></param>
     internal static void AsyncifyFreeBuffer(this Caller caller, int addr, int size)
     {
-        caller.GetFunction("asyncify_free_buffer")?.WrapAction<int, int>()?.Invoke(addr, size);
+        // Check if the special purpose malloc exists and use it
+        var async_mallocs = caller.GetAsyncifyMalloc();
+        if (async_mallocs is (not null, var async_free))
+        {
+            async_free(addr, size);
+            return;
+        }
+
+        // Try to use general purpose malloc
+        var mallocs = caller.GetMalloc();
+        if (mallocs is (not null, var free))
+        {
+            free(addr);
+            return;
+        }
+
+        // No malloc available
+    }
+
+    /// <summary>
+    /// Get the special asyncify malloc functions
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <returns></returns>
+    private static (Func<int, int> malloc, Action<int, int> free)? GetAsyncifyMalloc(this Caller caller)
+    {
+        var asyncify_malloc = caller.GetFunction("asyncify_malloc_buffer")?.WrapFunc<int, int>();
+        var asyncify_free = caller.GetFunction("asyncify_free_buffer")?.WrapAction<int, int>();
+        if (asyncify_malloc != null && asyncify_free != null)
+            return (asyncify_malloc, asyncify_free);
+        return null;
+    }
+
+    /// <summary>
+    /// Get the general malloc functions
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <returns></returns>
+    private static (Func<int, int> malloc, Action<int> free)? GetMalloc(this Caller caller)
+    {
+        var malloc = caller.GetFunction("malloc")?.WrapFunc<int, int>();
+        var free = caller.GetFunction("free")?.WrapAction<int>();
+        if (malloc != null && free != null)
+            return (malloc, free);
+        return null;
     }
 }
