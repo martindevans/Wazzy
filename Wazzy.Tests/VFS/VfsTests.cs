@@ -1,8 +1,6 @@
-﻿using Wasmtime;
-using Wazzy.Extensions;
-using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Builder;
+﻿using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Builder;
 
-namespace Wazzy.Tests;
+namespace Wazzy.Tests.VFS;
 
 [TestClass]
 public class VfsTests

@@ -1,7 +1,7 @@
 ﻿using Wazzy.WasiSnapshotPreview1.FileSystem;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Builder;
 
-namespace Wazzy.Tests;
+namespace Wazzy.Tests.VFS;
 
 [TestClass]
 public class VirtualFileSystemTests
