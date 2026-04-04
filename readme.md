@@ -64,4 +64,4 @@ Export a second memory named `asyncify_unwind_stack_memory_heap` and asyncify us
 wasm-opt module.wasm -o module-async.wasm --asyncify --enable-multimemory --pass-arg=asyncify-memory@asyncify_unwind_stack_memory_heap
 ```
 
-Wazzy/Asyncify will use this second memory for all unwind/rewind operations, which is more efficient.
+Wazzy/Asyncify will use this second memory for all unwind/rewind operations, which is more efficient. If this second memory exists the cooperative allocation functions are ignored.
