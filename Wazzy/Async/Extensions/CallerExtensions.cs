@@ -89,16 +89,19 @@ public static class CallerExtensions
     }
 
     /// <summary>
-    /// Allocate a buffer of the given size. This will only succeed if the WASM code defines a function: <code>asyncify_malloc_buffer(int size) -> int</code>
+    /// Allocate a buffer of the given size.
+    /// - If `asyncify_malloc_buffer(int32) -> int32` is defined, uses that
+    /// - If `malloc(int32) -> int32` AND `free(int32)` are defined, uses malloc
     /// </summary>
+    /// <remarks>It is allowed for `asyncify_free_buffer` to not exist, in which case freeing is a no-op</remarks>
     /// <param name="caller"></param>
     /// <param name="size"></param>
     /// <returns></returns>
     internal static int? AsyncifyMallocBuffer(this Caller caller, int size)
     {
         // Check if the special purpose malloc exists and use it
-        var async_mallocs = caller.GetAsyncifyMalloc();
-        if (async_mallocs is (var async_malloc, not null))
+        var async_malloc = caller.GetAsyncifyMalloc();
+        if (async_malloc is not null)
         {
             var ptr = async_malloc(size);
             if (ptr < 0)
@@ -121,22 +124,25 @@ public static class CallerExtensions
     }
 
     /// <summary>
-    /// Free a previously allocated buffer (with `asyncify_malloc_buffer`) at the given address
+    /// Free a previously allocated buffer
+    /// - If `asyncify_malloc_buffer(int32) -> int32` exists, use `asyncify_free_buffer(int32, int32)`
+    /// - Otherwise, if `free(int32)` exists use it
     /// </summary>
+    /// <remarks>It is allowed for `asyncify_free_buffer` to not exist, in which case freeing is a no-op</remarks>
     /// <param name="caller"></param>
     /// <param name="addr"></param>
     /// <param name="size"></param>
     internal static void AsyncifyFreeBuffer(this Caller caller, int addr, int size)
     {
         // Check if the special purpose malloc exists and use it
-        var async_mallocs = caller.GetAsyncifyMalloc();
-        if (async_mallocs is (not null, var async_free))
+        var async_malloc = caller.GetAsyncifyMalloc();
+        if (async_malloc is not null)
         {
-            async_free(addr, size);
+            caller.GetAsyncifyFree()?.Invoke(addr, size);
             return;
         }
 
-        // Try to use general purpose malloc
+        // Try to use general purpose malloc/free
         var mallocs = caller.GetMalloc();
         if (mallocs is (not null, var free))
         {
@@ -148,17 +154,23 @@ public static class CallerExtensions
     }
 
     /// <summary>
-    /// Get the special asyncify malloc functions
+    /// Get the special asyncify malloc function
     /// </summary>
     /// <param name="caller"></param>
     /// <returns></returns>
-    private static (Func<int, int> malloc, Action<int, int> free)? GetAsyncifyMalloc(this Caller caller)
+    private static Func<int, int>? GetAsyncifyMalloc(this Caller caller)
     {
-        var asyncify_malloc = caller.GetFunction("asyncify_malloc_buffer")?.WrapFunc<int, int>();
-        var asyncify_free = caller.GetFunction("asyncify_free_buffer")?.WrapAction<int, int>();
-        if (asyncify_malloc != null && asyncify_free != null)
-            return (asyncify_malloc, asyncify_free);
-        return null;
+        return caller.GetFunction("asyncify_malloc_buffer")?.WrapFunc<int, int>();
+    }
+
+    /// <summary>
+    /// Get the special asyncify free function
+    /// </summary>
+    /// <param name="caller"></param>
+    /// <returns></returns>
+    private static Action<int, int>? GetAsyncifyFree(this Caller caller)
+    {
+        return caller.GetFunction("asyncify_free_buffer")?.WrapAction<int, int>();
     }
 
     /// <summary>
