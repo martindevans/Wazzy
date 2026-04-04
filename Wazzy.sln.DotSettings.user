@@ -1,10 +1,9 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/dotCover/Editor/HighlightingSourceSnapshotLocation/@EntryValue">C:\Users\Martin\AppData\Local\Temp\JetBrains\ReSharperPlatformVs18\vAny_640a6eae\CoverageData\_Wazzy.1727317920\Snapshot\snapshot.utdcvr</s:String>
 	
 	<s:String x:Key="/Default/Environment/Highlighting/HighlightingSourceSnapshotLocation/@EntryValue">C:\Users\Martin\AppData\Local\Temp\JetBrains\ReSharperPlatformVs17\vAny_ac125f2d\CoverageData\_Wazzy.1727317920\Snapshot\snapshot.utdcvr</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=0ab134e6_002Dd76d_002D43e1_002Da04d_002Da45aaa1a7b53/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="FreezeThawTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
-  &lt;TestAncestor&gt;&#xD;
-    &lt;TestId&gt;MSTest::9B8CD7D2-4059-4E38-8333-791A1C29043D::net8.0::Wazzy.Tests.FreezeThawTests&lt;/TestId&gt;&#xD;
-  &lt;/TestAncestor&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=0ab134e6_002Dd76d_002D43e1_002Da04d_002Da45aaa1a7b53/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="FreezeThawTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;Project Location="C:\Users\Martin\Documents\dotnet\Wazzy\Wazzy.Tests" Presentation="&amp;lt;Wazzy.Tests&amp;gt;" /&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=333f2a06_002D5408_002D409d_002D8e8a_002D21355fc4a9db/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Session" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;Solution /&gt;&#xD;

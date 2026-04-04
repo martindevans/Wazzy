@@ -1,7 +1,7 @@
 ﻿namespace Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
 
 internal class MappedFile
-        : IFile
+    : IFile
 {
     private class Handle
         : BaseFileHandle<MappedFile>
@@ -21,7 +21,8 @@ internal class MappedFile
             }
         }
 
-        public Handle(MappedFile file, FdFlags flags) : base(file, flags)
+        public Handle(MappedFile file, FdFlags flags)
+            : base(file, flags)
         {
             var mode = (flags & FdFlags.Append) != 0 ? FileMode.Append : FileMode.Open;
 

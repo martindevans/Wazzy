@@ -228,7 +228,7 @@ public sealed class VirtualFileSystem
         }
 
         // todo this should probably be communicated back to the caller via a wasi error
-        ArgumentNullException.ThrowIfNull(rootDirectory, nameof(rootDirectory));
+        ArgumentNullException.ThrowIfNull(rootDirectory);
 
         return rootDirectory.GetChild(path.Bytes)?.Content;
     }
@@ -652,7 +652,7 @@ public sealed class VirtualFileSystem
             return new WriteResultData(WasiError.EISDIR, 0);
 
         if (!fileHandle.File.IsWritable)
-            return new WriteResultData(WasiError.SUCCESS, 0);
+            return new WriteResultData(WasiError.EPERM, 0);
 
         // Save the current position
         var saveOffset = fileHandle.Position;
