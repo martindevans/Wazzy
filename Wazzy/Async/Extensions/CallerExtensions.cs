@@ -126,7 +126,7 @@ public static class CallerExtensions
     /// <summary>
     /// Free a previously allocated buffer
     /// - If `asyncify_malloc_buffer(int32) -> int32` exists, use `asyncify_free_buffer(int32, int32)`
-    /// - Otherwise, if `free(int32)` exists use it
+    /// - Otherwise, if `malloc(int32) -> int32` AND free(int32)` exist use `free`
     /// </summary>
     /// <remarks>It is allowed for `asyncify_free_buffer` to not exist, in which case freeing is a no-op</remarks>
     /// <param name="caller"></param>
