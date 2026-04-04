@@ -41,14 +41,20 @@ wasm-opt module.wasm -o module-async.wasm --asyncify
 
 ### Cooperative Allocation
 
-Asyncify the module the same way as before.
+Compile your module and export `malloc` and `free` functions. Asyncify in the same way as before.
 
-Export a two methods for cooperative allocation: `asyncify_malloc_buffer(int32) -> int32` & `asyncify_free_buffer(int32, int32)`.
+Wazzy will use malloc and free to allocate memory buffers for itself, which makes async unwind/rewind more efficient.
 
- - `asyncify_malloc_buffer` should accept a size and should return a pointer to a buffer of that size (or a negative number, to indicate allocation failure).
- - `asyncify_free_buffer` should accept a pointer to a buffer and the size of that buffer (both matching a previous `asyncify_malloc_buffer` call) and free it.
+### Cooperative Allocation (Special)
 
-Wazzy will use these methods to allocate memory for itself, which makes async unwind/rewind more efficient.
+If you want to provide a special purpose allocator specifically for async unwind/rewind (e.g. returning a pointer to a statically allocated buffer), export:
+
+ - `asyncify_malloc_buffer(int32 size) -> int32 address`
+ - `asyncify_free_buffer(int32 address, int32 size)`
+
+If `asyncify_malloc_buffer` is defined it will be used instead of `malloc`/`free` even if they are exported.
+
+`asyncify_free_buffer` is optional, if it is not defined free becomes a no-op.
 
 ### Multi Memory
 
