@@ -29,7 +29,7 @@ public sealed class VirtualFileSystem
 
     private readonly System.Random _fdGenerator;
 
-    private readonly object _globalLock = new();
+    private readonly Lock _globalLock = new();
 
     internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens, int seed)
     {
@@ -415,11 +415,10 @@ public sealed class VirtualFileSystem
 
                 if ((openFlags & OpenFlags.Truncate) == OpenFlags.Truncate)
                 {
-                    if (!file.IsWritable)
+                    if (!file.IsWritable || _readonly)
                         return PathOpenResult.ReadOnly;
                     using var fileHandle = file.Open(fdFlags);
                     fileHandle.Truncate(GetTimestamp());
-                    fileHandle.Seek(0, Whence.End, out _);
                 }
 
                 var newFd = AllocateFd();

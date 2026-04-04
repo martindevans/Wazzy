@@ -86,7 +86,9 @@ public class RustSpecTests
     //[TestMethod]
     //public void FdFlagsSet()
     //{
-    //    //todo: https://github.com/WebAssembly/wasi-testsuite/blob/main/tests/rust/src/bin/fd_flags_set.rs
+    //    // Failing because in dotnet an Append file is WriteOnly. But it seems like in WASI FDFLAGS_APPEND only affects writes.
+
+    //    //todo: https://github.com/WebAssembly/wasi-testsuite/blob/96bcf61cf88023ca547d60f8b04c49f3d43d2838/tests/rust/wasm32-wasip1/src/bin/fd_flags_set.rs
     //    Run("rust/testsuite/fd_flags_set", false);
     //}
 
