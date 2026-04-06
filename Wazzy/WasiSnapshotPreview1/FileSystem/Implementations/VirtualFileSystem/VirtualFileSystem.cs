@@ -1,4 +1,5 @@
-﻿using System.Buffers;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -24,6 +25,7 @@ public sealed class VirtualFileSystem
     private readonly IVFSClock _clock;
 
     private readonly IDirectory _root;
+    private readonly ILogger? _logger;
     private readonly List<(FileDescriptor, ReadOnlyMemory<byte>)> _preOpened = [];
     private readonly Dictionary<FileDescriptor, IFilesystemHandle> _handles = [];
 
@@ -31,12 +33,13 @@ public sealed class VirtualFileSystem
 
     private readonly Lock _globalLock = new();
 
-    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens, int seed)
+    internal VirtualFileSystem(bool @readonly, bool blocking, IVFSClock clock, IFile stdin, IFile stdout, IFile stderr, IDirectory root, List<string> preopens, int seed, ILogger? logger)
     {
         _readonly = @readonly;
         _blocking = blocking;
         _clock = clock;
         _root = root;
+        _logger = logger;
         _fdGenerator = new System.Random(seed);
 
         // Create handles for default streams
@@ -260,6 +263,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.ReadLinkAt(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path, Span<byte> result, out int nwritten)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:ReadLinkAt({fd}, {path})", fd, new PathUtf8(path).ToString());
+        
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -278,6 +284,9 @@ public sealed class VirtualFileSystem
 
     PrestatGetResult IWasiFileSystem.PrestatGet(Caller caller, FileDescriptor fd, out Prestat result)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PrestatGet({fd})", fd);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -299,6 +308,9 @@ public sealed class VirtualFileSystem
 
     PrestatDirNameResult IWasiFileSystem.PrestatDirName(Caller caller, FileDescriptor fd, Span<byte> name)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PrestatDirName({fd}, {path})", fd, new PathUtf8(name).ToString());
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -334,6 +346,9 @@ public sealed class VirtualFileSystem
         out FileDescriptor outputFd
     )
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathOpen({fd}, {lookup}, {path}, {openflags}, {fdflags})", fd, lookup, new PathUtf8(path).ToString(), openFlags, fdFlags);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -437,6 +452,9 @@ public sealed class VirtualFileSystem
 
     private PathOpenResult PathOpenCreate(IDirectoryHandle root, PathUtf8 path, OpenFlags openFlags, FdFlags fdFlags, out FileDescriptor outputFd)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathOpenCreate({path}, {openFlags}, {fdFlags})", path.ToString(), openFlags, fdFlags);
+
         outputFd = default;
 
         if (_readonly)
@@ -495,6 +513,9 @@ public sealed class VirtualFileSystem
 
     CloseResult IWasiFileSystem.Close(Caller caller, FileDescriptor fd)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:Close({fd})", fd);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -516,6 +537,9 @@ public sealed class VirtualFileSystem
 
     ReadDirectoryResult IWasiFileSystem.ReadDirectory(Caller caller, FileDescriptor fd, Span<byte> outputBuffer, long cookie, out uint bufUsed)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:ReadDirectory({fd}, {cookie})", fd, cookie);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -589,6 +613,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.PathCreateDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathCreateDirectory({fd}, {path})", fd, new PathUtf8(pathBuffer).ToString());
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -673,17 +700,26 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.Write(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, Pointer<uint> nwrittenPtr)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:Write({fd}, {iovsCount}, {iovsTotal})", fd, iovs.Length, iovs.TotalLength(caller));
+
         return FileWrite(caller, fd, iovs, nwrittenPtr, 0, Whence.Current, false);
     }
 
     WasiError IWasiFileSystem.PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nwrittenPtr)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PWrite({fd}, {iovsCount}, {iovsTotal}, {offset})", fd, iovs.Length, iovs.TotalLength(caller), offset);
+
         return FileWrite(caller, fd, iovs, nwrittenPtr, offset, Whence.Set, true);
     }
     #endregion
 
     WasiError IWasiFileSystem.FdAllocate(Caller caller, FileDescriptor fd, long offset, long length)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:FdAllocate({fd}, {offset}, {length})", fd, offset, length);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -700,6 +736,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.StatSetSize(Caller caller, FileDescriptor fd, long size)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:StatSetSize({fd}, {size})", fd, size);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -721,6 +760,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.FdStatGet(Caller caller, FileDescriptor fd, out FdStat statPtr)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:FdStatGet({fd})", fd);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -739,6 +781,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.FdStatSetFlags(Caller caller, FileDescriptor fd, FdFlags flags)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:FdStatSetFlags({fd}, {flags})", fd, flags);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -749,6 +794,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.FdStatSetTimes(Caller caller, FileDescriptor fd, long atime, long mtime, FstFlags fstFlags)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:FdStatSetFlags({fd}, {atime}, {mtime}, {fstFlags})", fd, atime, mtime, fstFlags);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -763,6 +811,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.PathFileStatSetTimes(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, long atime, long mtime, FstFlags fstFlags)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathFileStatSetTimes({fd}, {lookup}, {path}, {atime}, {mtime}, {fstFlags})", fd, lookup, new PathUtf8(path).String, atime, mtime, fstFlags);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -783,6 +834,9 @@ public sealed class VirtualFileSystem
 
     StatResult IWasiFileSystem.StatGet(Caller caller, FileDescriptor fd, out FileStat result)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:StatGet({fd})", fd);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -801,6 +855,9 @@ public sealed class VirtualFileSystem
 
     StatResult IWasiFileSystem.PathStatGet(Caller caller, FileDescriptor fd, LookupFlags lookup, ReadOnlySpan<byte> path, out FileStat result)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathStatGet({fd}, {lookup}, {path})", fd, lookup, new PathUtf8(path).String);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -826,6 +883,9 @@ public sealed class VirtualFileSystem
     #region read
     ReadResult IWasiFileSystem.Read(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, Pointer<uint> nreadPtr)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:Read({fd}, {iovsCount}, {iovsTotal})", fd, iovs.Length, iovs.TotalLength(caller));
+
         lock (_globalLock)
         {
             return (ReadResult)PollAsync(
@@ -847,6 +907,9 @@ public sealed class VirtualFileSystem
 
     ReadResult IWasiFileSystem.PRead(Caller caller, FileDescriptor fd, Buffer<Buffer<byte>> iovs, long offset, Pointer<uint> nreadPtr)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PRead({fd}, {iovsCount}, {iovsTotal}, {offset})", fd, iovs.Length, iovs.TotalLength(caller), offset);
+
         lock (_globalLock)
         {
             return (ReadResult)PollAsync(
@@ -927,6 +990,9 @@ public sealed class VirtualFileSystem
 
     SeekResult IWasiFileSystem.Seek(Caller caller, FileDescriptor fd, long offset, Whence whence, ref ulong newOffset)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:Seek({fd}, {offset}, {whence})", fd, offset, whence);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -944,6 +1010,9 @@ public sealed class VirtualFileSystem
 
     SyncResult IWasiFileSystem.Sync(Caller caller, FileDescriptor fd)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:Sync({fd})", fd);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -967,6 +1036,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathRemoveDirectory({fd}, {path})", fd, new PathUtf8(pathBuffer).String);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -1005,6 +1077,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.PathUnlinkFile(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathUnlinkFile({fd}, {path})", fd, new PathUtf8(pathBuffer).String);
+
         lock (_globalLock)
         {
             CheckAsyncState();
@@ -1037,6 +1112,9 @@ public sealed class VirtualFileSystem
 
     WasiError IWasiFileSystem.PathRename(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> oldPathBuffer, FileDescriptor newFd, ReadOnlySpan<byte> newPathBuffer)
     {
+        if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
+            _logger?.LogTrace("VFS:PathRename({fd}, {old_path}, {newFd}, {new_path})", fd, new PathUtf8(oldPathBuffer).String, newFd, new PathUtf8(newPathBuffer).String);
+
         lock (_globalLock)
         {
             CheckAsyncState();

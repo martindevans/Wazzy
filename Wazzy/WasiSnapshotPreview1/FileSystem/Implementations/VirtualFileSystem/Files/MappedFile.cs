@@ -26,11 +26,9 @@ internal class MappedFile
         {
             var mode = (flags & FdFlags.Append) != 0 ? FileMode.Append : FileMode.Open;
 
-            // todo check mapped file FileMode and FileShare options are correct
-
             _fileInfo = file._info;
-            _stream = _fileInfo.Open(mode);
-            _flushWrites = (flags & FdFlags.Sync) != 0 || (flags & FdFlags.DSync) != 0;
+            _stream = _fileInfo.Open(mode, FileAccess.ReadWrite, FileShare.ReadWrite);
+            _flushWrites = (flags & (FdFlags.Sync | FdFlags.DSync)) != 0;
         }
 
         public override void Dispose()

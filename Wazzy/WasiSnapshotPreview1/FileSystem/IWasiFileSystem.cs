@@ -95,7 +95,7 @@ public interface IWasiFileSystem
     /// <param name="offset"></param>
     /// <param name="nwrittenOutput"></param>
     /// <returns></returns>
-    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nwrittenPtr);
+    public WasiError PWrite(Caller caller, FileDescriptor fd, ReadonlyBuffer<ReadonlyBuffer<byte>> iovs, long offset, Pointer<uint> nwrittenOutput);
 
     /// <summary>
     /// Get a "FileStat" object for the given file descriptor

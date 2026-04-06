@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Wazzy.WasiSnapshotPreview1.Clock;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Directories;
 using Wazzy.WasiSnapshotPreview1.FileSystem.Implementations.VirtualFileSystem.Files;
@@ -15,6 +16,7 @@ public class VirtualFileSystemBuilder
     private IFile? _stdout;
     private IFile? _stderr;
     private IVFSClock? _clock;
+    private ILogger? _logger;
     private bool _readonly;
     private bool _blocking;
     private readonly List<string> _preopens = [];
@@ -43,7 +45,8 @@ public class VirtualFileSystemBuilder
             _stderr ?? new ZeroFile(),
             root,
             _preopens,
-            _seed
+            _seed,
+            _logger
         );
     }
 
@@ -124,6 +127,12 @@ public class VirtualFileSystemBuilder
     public VirtualFileSystemBuilder Seed(int seed)
     {
         _seed = seed;
+        return this;
+    }
+    
+    public VirtualFileSystemBuilder WithLogger(ILogger logger)
+    {
+        _logger = logger;
         return this;
     }
 }
