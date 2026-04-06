@@ -92,6 +92,9 @@ public class InMemoryFile
 
         public override ulong PollReadableBytes()
         {
+            if (Position > Size)
+                return 0;
+            
             return Size - Position;
         }
 
