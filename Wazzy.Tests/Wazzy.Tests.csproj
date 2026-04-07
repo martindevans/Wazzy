@@ -381,6 +381,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="VFS\Scripts\PathRename.wat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="VFS\Scripts\" />
   </ItemGroup>
 
