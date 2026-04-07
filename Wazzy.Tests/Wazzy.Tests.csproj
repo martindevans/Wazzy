@@ -384,6 +384,9 @@
     <None Update="VFS\Scripts\PathUnlinkFile.wat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="VFS\Scripts\PathCreateDirectory.wat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
