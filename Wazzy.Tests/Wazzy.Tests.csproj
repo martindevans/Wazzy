@@ -381,10 +381,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="VFS\Scripts\" />
     <None Update="VFS\Scripts\PathUnlinkFile.wat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="VFS\Scripts\PathCreateDirectory.wat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="VFS\Scripts\PathRename.wat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
