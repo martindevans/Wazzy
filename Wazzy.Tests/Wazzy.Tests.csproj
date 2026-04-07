@@ -381,7 +381,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="VFS\Scripts\" />
+    <None Update="VFS\Scripts\PathUnlinkFile.wat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
