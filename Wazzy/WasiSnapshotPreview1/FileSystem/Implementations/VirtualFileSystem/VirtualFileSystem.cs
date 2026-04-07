@@ -1128,7 +1128,7 @@ public sealed class VirtualFileSystem
                 return err1;
             var err2 = GetDirectory(newFd, out var newRootDir);
             if (err2 != WasiError.SUCCESS)
-                return err1;
+                return err2;
 
             // Get the directory relative to the root
             var oldPath = new PathUtf8(oldPathBuffer);
