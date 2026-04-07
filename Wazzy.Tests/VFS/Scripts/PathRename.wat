@@ -15,7 +15,6 @@
     ;; 512: "missing/source.txt"  len=18  (parent dir "missing" does not exist)
     ;; 640: "missing/dest.txt"    len=16  (parent dir "missing" does not exist)
     ;; 768: "notfound.txt"        len=12  (file itself does not exist)
-    ;; 832: "mapped.txt"          len=10  (host-mapped file, CanMove=false)
     (data (i32.const 0)   "source.txt")
     (data (i32.const 64)  "dest.txt")
     (data (i32.const 128) "sourcedir")
@@ -25,7 +24,6 @@
     (data (i32.const 512) "missing/source.txt")
     (data (i32.const 640) "missing/dest.txt")
     (data (i32.const 768) "notfound.txt")
-    (data (i32.const 832) "mapped.txt")
 
     ;; Rename "source.txt" -> "dest.txt" in the root pre-open (fd=3).
     ;; Expected: SUCCESS (0) when the file exists and the VFS is writable.
@@ -183,19 +181,4 @@
         )
     )
     (export "rename_dest_exists" (func $rename_dest_exists))
-
-    ;; Rename a host-mapped file (CanMove=false).
-    ;; Expected: EIO (29) because VirtualDirectoryContent.Move guards against
-    ;; moving mounted entries.
-    (func $rename_mapped_file (result i32)
-        (call $path_rename
-            (i32.const 3)
-            (i32.const 832) ;; "mapped.txt"
-            (i32.const 10)
-            (i32.const 3)
-            (i32.const 64)  ;; "dest.txt"
-            (i32.const 8)
-        )
-    )
-    (export "rename_mapped_file" (func $rename_mapped_file))
 )

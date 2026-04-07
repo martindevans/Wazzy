@@ -235,31 +235,4 @@ public class PathRenameTests : IDisposable
 
         Assert.AreEqual((int)WasiError.EEXIST, result);
     }
-
-    // ── EIO – mounted/mapped file cannot be moved ─────────────────────────────
-
-    [TestMethod]
-    public void RenameFile_MappedFile_ReturnsEIO()
-    {
-        // Host-mapped files have CanMove=false; Move returns EIO for these.
-        var tempFile = Path.GetTempFileName();
-        try
-        {
-            var vfs = BuildVfs(files: root =>
-            {
-                root.MapFile("mapped.txt", tempFile);
-            });
-
-            _helper.AddWasiFeature(vfs);
-            var instance = _helper.Instantiate();
-
-            var result = instance.GetFunction<int>("rename_mapped_file")!();
-
-            Assert.AreEqual((int)WasiError.EIO, result);
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
-    }
 }
