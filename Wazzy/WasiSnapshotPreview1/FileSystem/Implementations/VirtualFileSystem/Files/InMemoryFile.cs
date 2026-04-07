@@ -13,13 +13,7 @@ public class InMemoryFile
         public override ulong Position
         {
             get => (ulong)_position;
-            set
-            {
-                // Grow to ensure we can seek to this position
-                if (value > Size)
-                    File._memory.SetLength((long)value);
-                _position = (long)value;
-            }
+            set => _position = (long)value;
         }
 
         public Handle(InMemoryFile file, FdFlags flags)
@@ -42,6 +36,11 @@ public class InMemoryFile
         {
             TryRead(timestamp);
 
+            // Handle reading beyond the end of the file
+            if (_position >= File._memory.Length)
+                return Task.FromResult(0u);
+            
+            // Do the actual read and advance the position
             File._memory.Seek(_position, SeekOrigin.Begin);
             var read = File._memory.Read(memory.Span);
             _position += read;
@@ -54,7 +53,15 @@ public class InMemoryFile
             TryWrite(timestamp);
 
             if ((Flags & FdFlags.Append) != 0)
+            {
                 _position = File._memory.Length;
+            }
+            else
+            {
+                // Position has been set beyond the end of the file, grow to fit
+                if (_position >= File._memory.Length)
+                    File._memory.SetLength(_position + 1);
+            }
 
             File._memory.Seek(_position, SeekOrigin.Begin);
             File._memory.Write(bytes.Span);
@@ -85,6 +92,9 @@ public class InMemoryFile
 
         public override ulong PollReadableBytes()
         {
+            if (Position > Size)
+                return 0;
+            
             return Size - Position;
         }
 
