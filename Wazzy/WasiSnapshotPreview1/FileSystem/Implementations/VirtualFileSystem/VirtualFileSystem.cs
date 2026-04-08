@@ -85,20 +85,6 @@ public sealed class VirtualFileSystem
         return null;
     }
 
-    private int WithHandle(Caller caller, FileDescriptor fd, WithFileHandleDelegate handleAct)
-    {
-        lock (_globalLock)
-        {
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return (int)WasiError.EBADF;
-
-            return handleAct(caller, handle);
-        }
-    }
-
-    private delegate int WithFileHandleDelegate(Caller caller, IFilesystemHandle handle);
-
     private IFilesystemHandle? GetHandle(FileDescriptor fd)
     {
         _handles.TryGetValue(fd, out var handle);
@@ -1017,24 +1003,25 @@ public sealed class VirtualFileSystem
         {
             CheckAsyncState();
 
-            return (SyncResult)WithHandle(caller, fd, static (_, handle) =>
-            {
-                try
-                {
-                    if (handle is IFileHandle file)
-                        file.Sync();
-                }
-                catch
-                {
-                    return (int)SyncResult.IoError;
-                }
+            var handle = GetHandle(fd);
+            if (handle == null)
+                return SyncResult.BadFileDescriptor;
 
-                return (int)SyncResult.Success;
-            });
+            try
+            {
+                if (handle is IFileHandle file)
+                    file.Sync();
+            }
+            catch
+            {
+                return SyncResult.IoError;
+            }
+
+            return SyncResult.Success;
         }
     }
 
-    WasiError IWasiFileSystem.PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
+    RemoveDirectoryResult IWasiFileSystem.PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {
         if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
             _logger?.LogTrace("VFS:PathRemoveDirectory({fd}, {path})", fd, new PathUtf8(pathBuffer).String);
@@ -1044,34 +1031,34 @@ public sealed class VirtualFileSystem
             CheckAsyncState();
 
             if (_readonly)
-                return WasiError.EROFS;
+                return RemoveDirectoryResult.ReadonlyFilesystem;
 
             var handle = GetHandle(fd);
             if (handle is not IDirectoryHandle rootDir)
-                return WasiError.EBADF;
+                return RemoveDirectoryResult.BadFileDescriptor;
 
             var path = new PathUtf8(pathBuffer);
             var name = path.GetName();
 
             var parentDir = ResolveParent(path, rootDir.Directory);
             if (parentDir is null)
-                return WasiError.ENOENT;
+                return RemoveDirectoryResult.NoEntity;
 
             var item = parentDir.GetChild(name);
             if (!item.HasValue)
-                return WasiError.ENOENT;
+                return RemoveDirectoryResult.NoEntity;
 
             if (item.Value.Content is not IDirectory dir)
-                return WasiError.ENOTDIR;
+                return RemoveDirectoryResult.NotADirectory;
 
             using (var h = dir.Open())
             {
                 if (h is IDirectoryHandle dirHandle && dirHandle.EnumerateChildren(GetTimestamp()).Count > 0)
-                    return WasiError.ENOTEMPTY;
+                    return RemoveDirectoryResult.NotEmpty;
             }
 
             parentDir.Delete(name);
-            return WasiError.SUCCESS;
+            return RemoveDirectoryResult.Success;
         }
     }
 

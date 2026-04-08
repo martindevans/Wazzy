@@ -204,7 +204,7 @@ public interface IWasiFileSystem
         return Sync(caller, fd);
     }
 
-    public WasiError PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
+    public RemoveDirectoryResult PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
 
     public WasiError PathUnlinkFile(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path);
 
