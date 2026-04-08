@@ -131,9 +131,9 @@ public abstract class WriteToOutputFilesystem
         return SyncResult.BadFileDescriptor;
     }
 
-    public WasiError PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path)
+    public RemoveDirectoryResult PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path)
     {
-        return WasiError.EBADF;
+        return RemoveDirectoryResult.BadFileDescriptor;
     }
 
     public WasiError PathUnlinkFile(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> path)
