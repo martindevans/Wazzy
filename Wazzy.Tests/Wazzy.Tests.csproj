@@ -391,6 +391,9 @@
     <None Update="VFS\Scripts\PathRename.wat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="VFS\Scripts\PathRemoveDirectory.wat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
