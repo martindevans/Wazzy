@@ -49,4 +49,22 @@ internal static class MemoryExtensions
         GrowToByteSize(memory, src.Length);
         src.CopyTo(memory.GetSpan(0, src.Length));
     }
+
+    /// <summary>
+    /// copy from the given pointer into memory (starting at zero)
+    /// </summary>
+    /// <param name="memory"></param>
+    /// <param name="srcPtr"></param>
+    /// <param name="count"></param>
+    internal static unsafe void WriteMemory(this Memory memory, byte* srcPtr, long count)
+    {
+        memory.GrowToByteSize(count);
+        
+        Buffer.MemoryCopy(
+            srcPtr,
+            (byte*)memory.GetPointer(),
+            memory.GetLength(),
+            count
+        );
+    }
 }

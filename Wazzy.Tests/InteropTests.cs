@@ -1,4 +1,5 @@
-﻿using Wazzy.Async.Extensions;
+﻿using Wasmtime;
+using Wazzy.Async.Extensions;
 using Wazzy.Async;
 using Wazzy.Interop;
 

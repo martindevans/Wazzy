@@ -1,11 +1,14 @@
 ﻿using System.IO.Compression;
 using System.Text;
 using Wasmtime;
+using Wazzy.Extensions;
 
 namespace Wazzy.Serialization;
 
 public static class InstanceExtensions
 {
+    private const uint MAGIC_NUMBER = 3719035627;
+
     /// <summary>
     /// Write the complete state of this instance to the given stream
     /// </summary>
@@ -16,8 +19,8 @@ public static class InstanceExtensions
         using var compression = new GZipStream(output, CompressionLevel.Optimal, true);
         using var writer = new BinaryWriter(compression, Encoding.UTF8, true);
 
-        // Write file header
-        writer.Write("SerializedInstance");
+        // Write file header (magic number, followed by version integer)
+        writer.Write(MAGIC_NUMBER);
         writer.Write((uint)1);
 
         // Write out memories
@@ -57,10 +60,10 @@ public static class InstanceExtensions
     /// </summary>
     /// <param name="module"></param>
     /// <param name="store"></param>
+    /// <param name="linker"></param>
     /// <param name="input"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="NotImplementedException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static Instance Thaw(this Module module, Store store, Linker linker, Stream input)
     {
@@ -68,13 +71,14 @@ public static class InstanceExtensions
         using var reader = new BinaryReader(compression, Encoding.UTF8, true);
 
         // Check file header
-        if (reader.ReadString() != "SerializedInstance")
-            throw new ArgumentException("File header is incorrect", nameof(input));
+        var magic = reader.ReadUInt32();
+        if (magic != MAGIC_NUMBER)
+            throw new IncorrectFileHeader(magic);
         
         // Check that we know how to deserialise the version
         var version = reader.ReadUInt32();
         if (version != 1)
-            throw new NotSupportedException($"File version number {version} unknown");
+            throw new UnknownVersionNumber(version);
 
         var memories = new List<(string, Memory)>();
         var globals = new List<(string, Global)>();
@@ -103,10 +107,10 @@ public static class InstanceExtensions
                 case SerializationSections.EndMemory:
                 case SerializationSections.EndTable:
                 case SerializationSections.EndGlobal:
-                    throw new ArgumentException("Encountered unexpected end-of-section while not in a section", nameof(input));
+                    throw new UnexpectedEndOfSection(header);
 
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new UnknownFileSectionType(header);
             }
         }
         
@@ -119,7 +123,26 @@ public static class InstanceExtensions
             linker.Define(module.Name, name, table);
 
         // Instantiate module
-        return linker.Instantiate(store, module);
+        var instance = linker.Instantiate(store, module);
+
+        // Configure globals
+        foreach (var (name, global) in globals)
+        {
+            var g = instance.GetGlobal(name);
+            g!.SetValue(global.GetValue());
+        }
+
+        // Configure memories
+        foreach (var (name, memory) in memories)
+        {
+            unsafe
+            {
+                var m = instance.GetMemory(name);
+                m!.WriteMemory((byte*)memory.GetPointer(), memory.GetLength());
+            }
+        }
+
+        return instance;
 
         static void CheckSection(BinaryReader reader, SerializationSections expected)
         {
@@ -129,7 +152,7 @@ public static class InstanceExtensions
         }
     }
 
-    private enum SerializationSections
+    internal enum SerializationSections
     {
         Memory = 1,
         EndMemory = -Memory,

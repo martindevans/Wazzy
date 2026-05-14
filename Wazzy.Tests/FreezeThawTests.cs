@@ -1,8 +1,12 @@
 ﻿using System.Text;
 using Wasmtime;
+using Wazzy.Async;
+using Wazzy.Async.Extensions;
 using Wazzy.Extensions;
 using Wazzy.Serialization;
+using Wazzy.WasiSnapshotPreview1.Process;
 using Wazzy.WasiSnapshotPreview1.Random;
+using InstanceExtensions = Wazzy.Serialization.InstanceExtensions;
 
 namespace Wazzy.Tests;
 
@@ -38,7 +42,6 @@ public class FreezeThawTests
         var i2 = _helper.Module.Thaw(store2, linker, output);
     }
 
-
     [TestMethod]
     public void RoundTripMemory()
     {
@@ -58,5 +61,50 @@ public class FreezeThawTests
         var span1 = m1.GetSpan(0, checked((int)m1.GetLength()));
         var span2 = m2.GetSpan(0, checked((int)m2.GetLength()));
         Assert.IsTrue(span1.SequenceEqual(span2));
+    }
+    
+    [TestMethod]
+    public void SimpleSerializedAsyncCall()
+    {
+        var instance = Load();
+
+        Call();
+
+        while (instance.GetAsyncState() == AsyncState.Suspending)
+        {
+            // Suspend
+            var stack = instance.StopUnwind();
+            Assert.IsInstanceOfType<SchedYieldSuspend>(stack.SuspendReason);
+
+            // Freeze
+            using var stream = new MemoryStream();
+            instance.Freeze(stream);
+            
+            // Thaw into a new instance
+            instance = Load(stream);
+
+            instance.StartRewind(stack);
+
+            Call();
+        }
+
+        Assert.AreEqual(AsyncState.None, instance.GetAsyncState());
+
+        void Call()
+        {
+            instance.GetFunction<int>("call_yield")!();
+        }
+
+        Instance Load(Stream? stream = null)
+        {
+            WasmTestHelper helper = new("Scripts/YieldAsync.wasm");
+            helper.Linker.DefineFeature(new AsyncifyYieldProcess());
+
+            stream?.Position = 0;
+
+            return stream == null
+                 ? helper.Instantiate()
+                 : helper.Module.Thaw(helper.Store, helper.Linker, stream);
+        }
     }
 }
