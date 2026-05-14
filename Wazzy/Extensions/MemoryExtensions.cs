@@ -58,7 +58,15 @@ internal static class MemoryExtensions
     /// <param name="count"></param>
     internal static unsafe void WriteMemory(this Memory memory, byte* srcPtr, long count)
     {
+        if (count < 0)
+            throw new ArgumentOutOfRangeException(nameof(count), "Cannot copy negative count of bytes");
+        if (count == 0)
+            return;
+        
         memory.GrowToByteSize(count);
+
+        if (count > memory.GetLength())
+            throw new ArgumentOutOfRangeException(nameof(count), "Cannot grow memory to specified size for copy");
         
         Buffer.MemoryCopy(
             srcPtr,

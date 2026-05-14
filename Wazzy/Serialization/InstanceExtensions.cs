@@ -148,7 +148,7 @@ public static class InstanceExtensions
         {
             var header = (SerializationSections)reader.ReadInt32();
             if (header != expected)
-                throw new ArgumentException("Encountered unexpected end-of-section while not in a section", nameof(input));
+                throw new ArgumentException($"Encountered unexpected end-of-section: {header}", nameof(input));
         }
     }
 
