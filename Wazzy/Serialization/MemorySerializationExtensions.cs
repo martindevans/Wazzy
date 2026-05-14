@@ -43,7 +43,11 @@ internal static class MemorySerializationExtensions
         var is64Bit = reader.ReadBoolean();
 
         var memory = new Memory(store, minimum, hasMax ? maximum : null, is64Bit);
-        memory.Grow(size);
+
+        // Grow only by the delta needed beyond the minimum pages already allocated.
+        var pagesToGrow = size - minimum;
+        if (pagesToGrow > 0)
+            memory.Grow(pagesToGrow);
 
         var checksum = 0u;
         unsafe

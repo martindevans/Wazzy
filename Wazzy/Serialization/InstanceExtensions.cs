@@ -10,7 +10,13 @@ public static class InstanceExtensions
     private const uint MAGIC_NUMBER = 3719035627;
 
     /// <summary>
-    /// Write the complete state of this instance to the given stream
+    /// Write the complete exported state of this instance to the given stream.
+    /// <para>
+    /// Only exported memories, tables, and mutable globals are preserved — non-exported
+    /// (internal) state is private to the WebAssembly sandbox and cannot be accessed by
+    /// the host. Modules that require full state preservation must export every mutable
+    /// global they wish to survive a freeze/thaw cycle.
+    /// </para>
     /// </summary>
     /// <param name="instance"></param>
     /// <param name="output"></param>
