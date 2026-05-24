@@ -106,7 +106,7 @@ public interface IFileHandle
     /// <summary>
     /// Complete any pending modifications to this file, ensuring they are written to the underlying device
     /// </summary>
-    void Sync();
+    Task Sync();
 
     ulong PollReadableBytes();
 
@@ -168,8 +168,9 @@ public abstract class BaseFileHandle<T>
 
     public abstract void Dispose();
 
-    public virtual void Sync()
+    public virtual Task Sync()
     {
+        return Task.CompletedTask;
     }
 
     public abstract ulong PollReadableBytes();

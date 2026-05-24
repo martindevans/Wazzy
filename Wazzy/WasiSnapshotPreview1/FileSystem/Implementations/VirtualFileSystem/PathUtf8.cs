@@ -15,6 +15,16 @@ internal readonly ref struct PathUtf8(ReadOnlySpan<byte> bytes)
         return Bytes.Length > 0 && Bytes[0] == (byte)'/';
     }
 
+    /// <summary>
+    /// Determines whether the path is complex.
+    /// </summary>
+    /// <remarks>
+    /// A path is considered complex if it contains segments that consist solely of
+    /// one or more dots (e.g., "." or "..").
+    /// </remarks>
+    /// <returns>
+    /// <c>true</c> if the path contains complex segments; otherwise, <c>false</c>.
+    /// </returns>
     public bool IsComplex()
     {
         var remaining = Bytes;

@@ -994,6 +994,7 @@ public sealed class VirtualFileSystem
         }
     }
 
+    #region sync
     SyncResult IWasiFileSystem.Sync(Caller caller, FileDescriptor fd)
     {
         if (_logger != null && _logger.IsEnabled(LogLevel.Trace))
@@ -1001,25 +1002,45 @@ public sealed class VirtualFileSystem
 
         lock (_globalLock)
         {
-            CheckAsyncState();
-
-            var handle = GetHandle(fd);
-            if (handle == null)
-                return SyncResult.BadFileDescriptor;
-
-            try
-            {
-                if (handle is IFileHandle file)
-                    file.Sync();
-            }
-            catch
-            {
-                return SyncResult.IoError;
-            }
-
-            return SyncResult.Success;
+            return (SyncResult)PollAsync<SyncResultData>(
+                caller,
+                _ => CoCreateSyncTask(fd),
+                null
+            );
         }
     }
+
+    private async Task<SyncResultData> CoCreateSyncTask(FileDescriptor fd)
+    {
+        var handle = GetHandle(fd);
+        if (handle == null)
+            return new(SyncResult.BadFileDescriptor);
+
+        try
+        {
+            if (handle is IFileHandle file)
+                await file.Sync();
+        }
+        catch
+        {
+            return new(SyncResult.IoError);
+        }
+
+        return new(SyncResult.Success);
+    }
+
+    private record SyncResultData
+        : IAsyncReturn
+    {
+        public SyncResultData(SyncResult returnCode)
+        {
+            ReturnCode = (WasiError)returnCode;
+        }
+
+        public WasiError ReturnCode { get; init; }
+    }
+
+    #endregion
 
     RemoveDirectoryResult IWasiFileSystem.PathRemoveDirectory(Caller caller, FileDescriptor fd, ReadOnlySpan<byte> pathBuffer)
     {

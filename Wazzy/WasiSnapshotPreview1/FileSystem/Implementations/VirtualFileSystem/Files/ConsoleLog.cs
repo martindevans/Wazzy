@@ -111,10 +111,10 @@ public class ConsoleLog
             }
         }
 
-        public override void Sync()
+        public override Task Sync()
         {
             WriteToLog(_builder.Count);
-            base.Sync();
+            return base.Sync();
         }
 
         public override ulong PollReadableBytes()

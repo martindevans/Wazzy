@@ -71,9 +71,9 @@ internal class MappedFile
             return (uint)bytes.Length;
         }
 
-        public override void Sync()
+        public override Task Sync()
         {
-            _stream.Flush();
+            return _stream.FlushAsync();
         }
 
         public override ulong PollReadableBytes()
